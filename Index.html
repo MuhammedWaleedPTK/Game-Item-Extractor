@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Primary SEO -->
-    <title>Game Item Extractor — Split Sprites into 256×256 Transparent PNGs | Free Online Tool</title>
-    <meta name="description" content="Free online tool to extract game items from screenshots. Automatically removes backgrounds, splits multiple items, and exports each as a 256×256 transparent PNG. No uploads — runs 100% in your browser.">
-    <meta name="keywords" content="game item extractor, sprite cutter, background remover, transparent PNG, 256x256, game assets, sprite sheet splitter, image splitter, game dev tools, free online tool">
-    <meta name="author" content="Game Item Extractor">
+    <title>SpriteCut AI — AI-Powered Sprite Splitter & BG Remover</title>
+    <meta name="description" content="Free AI-powered tool to extract game items from screenshots. SpriteCut AI automatically removes backgrounds, splits multiple items, and exports transparent PNGs. 100% browser-based.">
+    <meta name="keywords" content="SpriteCut AI, sprite splitter, game item extractor, background remover, transparent PNG, sprite sheet slicer, game development tools, AI image cropper">
+    <meta name="author" content="SpriteCut AI">
     <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://game-item-extractor.netlify.app/">
+    <link rel="canonical" href="https://spritecut-ai.netlify.app/">
 
     <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://game-item-extractor.netlify.app/">
-    <meta property="og:title" content="Game Item Extractor — Split Sprites into Transparent PNGs">
-    <meta property="og:description" content="Free browser tool: upload a screenshot with game items, auto-remove backgrounds, split and export each as a 256×256 transparent PNG. No uploads to any server.">
-    <meta property="og:site_name" content="Game Item Extractor">
+    <meta property="og:url" content="https://spritecut-ai.netlify.app/">
+    <meta property="og:title" content="SpriteCut AI — Professional Sprite Extraction Tool">
+    <meta property="og:description" content="AI-powered browser tool: upload a screenshot, auto-remove backgrounds, split items, and export high-quality transparent PNGs.">
+    <meta property="og:site_name" content="SpriteCut AI">
     <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Game Item Extractor — Free Sprite Splitter & BG Remover">
-    <meta name="twitter:description" content="Upload a screenshot, auto-split items into 256×256 transparent PNGs. 100% client-side, free forever.">
+    <meta name="twitter:title" content="SpriteCut AI — Free Sprite Splitter & BG Remover">
+    <meta name="twitter:description" content="Extract game assets instantly. SpriteCut AI auto-splits items into transparent PNGs. 100% client-side.">
 
     <!-- Mobile / PWA -->
     <meta name="theme-color" content="#0c0c18">
@@ -38,9 +38,9 @@
     {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "Game Item Extractor",
-        "url": "https://game-item-extractor.netlify.app/",
-        "description": "Free online tool to extract game items from screenshots. Automatically removes backgrounds, splits items, and exports as 256×256 transparent PNGs.",
+        "name": "SpriteCut AI",
+        "url": "https://spritecut-ai.netlify.app/",
+        "description": "Premium AI tool to extract game items from screenshots. Auto-removes backgrounds and splits sprites onto transparent canvases.",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any (Browser-based)",
         "offers": {
@@ -71,8 +71,27 @@
             --danger: #ff6b6b;
             --text-primary: #f0f0ff;
             --text-secondary: #8888aa;
-            --border: rgba(255, 255, 255, 0.06);
-            --radius: 16px;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 18px;
+            --glass-bg: rgba(20, 20, 42, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8f9fd;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f3ff;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.15);
+            --accent-light: #5d4cd1;
+            --success: #00b8b4;
+            --success-glow: rgba(0, 184, 180, 0.2);
+            --text-primary: #1e1e3f;
+            --text-secondary: #606080;
+            --border: rgba(0, 0, 0, 0.06);
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.05);
         }
 
         body {
@@ -84,14 +103,52 @@
             flex-direction: column;
             align-items: center;
             padding: 40px 20px;
+            transition: background 0.3s, color 0.3s;
             background-image:
                 radial-gradient(ellipse at 20% 0%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
                 radial-gradient(ellipse at 80% 100%, rgba(0, 206, 201, 0.06) 0%, transparent 60%);
         }
 
+        /* Ambient Glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(108, 92, 231, 0.03), transparent 80%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
         .container {
             max-width: 960px;
             width: 100%;
+            position: relative;
+        }
+
+        /* ─── Theme Toggle ─── */
+        .theme-toggle {
+            position: absolute;
+            top: -20px;
+            right: 0;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 1.2rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1) rotate(15deg);
+            border-color: var(--accent);
         }
 
         /* ─── Header ─── */
@@ -101,19 +158,25 @@
         }
 
         .header h1 {
-            font-size: 2.4rem;
+            font-size: 2.8rem;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-light), var(--success));
+            background: linear-gradient(90deg, var(--accent-light), var(--success), var(--accent-light));
+            background-size: 200% auto;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             margin-bottom: 12px;
-            letter-spacing: -0.5px;
+            letter-spacing: -1px;
+            animation: shimmer 4s linear infinite;
+        }
+
+        @keyframes shimmer {
+            to { background-position: 200% center; }
         }
 
         .header p {
             color: var(--text-secondary);
-            font-size: 1.05rem;
+            font-size: 1.1rem;
             line-height: 1.6;
             max-width: 600px;
             margin: 0 auto;
@@ -122,12 +185,15 @@
         /* ─── Upload Area ─── */
         .upload-zone {
             border: 2px dashed rgba(108, 92, 231, 0.4);
-            background: var(--bg-secondary);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius);
             padding: 50px 30px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
         }
@@ -315,13 +381,15 @@
         }
 
         .item-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
             padding: 24px;
             border-radius: var(--radius);
             text-align: center;
-            transition: all 0.3s ease;
-            animation: cardIn 0.5s ease backwards;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: cardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
         }
 
         .item-card:nth-child(1) { animation-delay: 0s; }
@@ -355,6 +423,59 @@
             border: 1px solid var(--border);
             margin-bottom: 16px;
             display: block;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .item-card canvas:hover {
+            transform: scale(1.02);
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .copy-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(108, 92, 231, 0.4);
+            backdrop-filter: blur(4px);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            z-index: 2;
+        }
+
+        .canvas-container:hover .copy-overlay {
+            opacity: 1;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--accent);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000;
+        }
+
+        .toast.visible {
+            transform: translateX(-50%) translateY(0);
         }
 
         .download-btn {
@@ -448,9 +569,12 @@
             gap: 14px;
             margin-bottom: 24px;
             padding: 14px 24px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 12px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
 
         .settings-bar label {
@@ -591,13 +715,26 @@
         .styled-select option { background: var(--bg-secondary); color: var(--text-primary); }
         .setting-group { display: flex; flex-direction: column; gap: 6px; align-items: center; }
 
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
         /* ─── Footer ─── */
         .footer {
             margin-top: 60px;
             text-align: center;
             color: var(--text-secondary);
-            font-size: 0.8rem;
-            opacity: 0.6;
+            font-size: 0.82rem;
+            opacity: 0.8;
+            position: relative;
+            z-index: 10;
         }
 
         /* ─── Responsive ─── */
@@ -614,10 +751,13 @@
 <body>
 
 <div class="container">
+    <!-- Theme Toggle -->
+    <div class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">🌙</div>
+
     <!-- Header -->
     <div class="header">
-        <h1>✂️ Game Item Extractor</h1>
-        <p>Upload one or more screenshots with items. This tool removes the background, splits each item, and exports them as <strong>256×256 transparent PNGs</strong>. Everything runs in your browser.</p>
+        <h1>✂️ SpriteCut AI</h1>
+        <p>AI-powered browser tool to isolate game assets and remove backgrounds instantly.</p>
     </div>
 
     <!-- Settings Bar -->
@@ -683,9 +823,15 @@
     <div class="reset-section" id="resetSection">
         <button class="reset-btn" id="resetBtn">↻ Process Another Image</button>
     </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Copied to Clipboard!</div>
 </div>
 
-<div class="footer">100% client-side · No uploads to any server · AI model cached in your browser</div>
+<!-- Interactive Background -->
+<canvas id="bgCanvas"></canvas>
+
+<div class="footer">SpriteCut AI · 100% client-side · No server uploads · AI cached locally</div>
 
 <script>
     (async function() {
@@ -706,13 +852,113 @@
     const resetBtn        = document.getElementById('resetBtn');
     const qualityToggle   = document.getElementById('qualityToggle');
     const itemCountSelect = document.getElementById('itemCountSelect');
+    const themeToggle     = document.getElementById('themeToggle');
+    const toast           = document.getElementById('toast');
+    const bgCanvas        = document.getElementById('bgCanvas');
     const steps           = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors      = [document.getElementById('conn1'), document.getElementById('conn2')];
+
+    // ─── Interactive Background ───
+    const bgCtx = bgCanvas.getContext('2d');
+    let particles = [];
+    let mouse = { x: null, y: null, radius: 150 };
+
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.x;
+        mouse.y = e.y;
+    });
+
+    class Particle {
+        constructor() {
+            this.x = Math.random() * bgCanvas.width;
+            this.y = Math.random() * bgCanvas.height;
+            this.size = Math.random() * 2 + 1;
+            this.speedX = Math.random() * 1 - 0.5;
+            this.speedY = Math.random() * 1 - 0.5;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+
+            if (this.x > bgCanvas.width) this.x = 0;
+            else if (this.x < 0) this.x = bgCanvas.width;
+            if (this.y > bgCanvas.height) this.y = 0;
+            else if (this.y < 0) this.y = bgCanvas.height;
+
+            // Mouse interaction
+            let dx = mouse.x - this.x;
+            let dy = mouse.y - this.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < mouse.radius) {
+                if (mouse.x < this.x && this.x < bgCanvas.width - 50) this.x += 2;
+                if (mouse.x > this.x && this.x > 50) this.x -= 2;
+                if (mouse.y < this.y && this.y < bgCanvas.height - 50) this.y += 2;
+                if (mouse.y > this.y && this.y > 50) this.y -= 2;
+            }
+        }
+        draw() {
+            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+            bgCtx.fillStyle = isLight ? 'rgba(108, 92, 231, 0.4)' : 'rgba(162, 155, 254, 0.4)';
+            bgCtx.beginPath();
+            bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            bgCtx.fill();
+        }
+    }
+
+    function initParticles() {
+        particles = [];
+        let count = (bgCanvas.width * bgCanvas.height) / 12000;
+        for (let i = 0; i < count; i++) {
+            particles.push(new Particle());
+        }
+    }
+
+    function animateParticles() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        for (let i = 0; i < particles.length; i++) {
+            particles[i].update();
+            particles[i].draw();
+
+            for (let j = i; j < particles.length; j++) {
+                let dx = particles[i].x - particles[j].x;
+                let dy = particles[i].y - particles[j].y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 120) {
+                    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+                    bgCtx.strokeStyle = isLight ? `rgba(108, 92, 231, ${1 - distance/120})` : `rgba(162, 155, 254, ${1 - distance/120})`;
+                    bgCtx.lineWidth = 0.5;
+                    bgCtx.beginPath();
+                    bgCtx.moveTo(particles[i].x, particles[i].y);
+                    bgCtx.lineTo(particles[j].x, particles[j].y);
+                    bgCtx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(animateParticles);
+    }
+
+    function resizeBg() {
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+        initParticles();
+    }
+
+    window.addEventListener('resize', resizeBg);
+    resizeBg();
+    animateParticles();
 
     // Store final canvases for ZIP download (each entry: { canvas, quality })
     let finalCanvases = [];
     let currentQuality = 'off'; // 'off' | 'medium' | 'high'
     let currentFiles = []; // To allow re-running when settings change
+
+    // ─── Theme Toggle ───
+    themeToggle.addEventListener('click', () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        document.documentElement.setAttribute('data-theme', isLight ? 'dark' : 'light');
+        themeToggle.innerText = isLight ? '🌙' : '☀️';
+    });
 
     // ─── Quality Toggle ───
     qualityToggle.addEventListener('click', (e) => {
@@ -780,18 +1026,27 @@
 
     // ─── Download All as ZIP ───
     downloadAllBtn.addEventListener('click', async () => {
-        const zip = new JSZip();
-        for (let i = 0; i < finalCanvases.length; i++) {
-            const dataUrl = finalCanvases[i].toDataURL('image/png');
-            const base64 = dataUrl.split(',')[1];
-            zip.file(`item_${i + 1}.png`, base64, { base64: true });
+        const originalText = downloadAllBtn.innerHTML;
+        downloadAllBtn.disabled = true;
+        downloadAllBtn.innerHTML = '<span class="spinner"></span> Packing ZIP...';
+
+        try {
+            const zip = new JSZip();
+            for (let i = 0; i < finalCanvases.length; i++) {
+                const dataUrl = finalCanvases[i].toDataURL('image/png');
+                const base64 = dataUrl.split(',')[1];
+                zip.file(`item_${i + 1}.png`, base64, { base64: true });
+            }
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'extracted_items.zip';
+            link.click();
+            URL.revokeObjectURL(link.href);
+        } finally {
+            downloadAllBtn.disabled = false;
+            downloadAllBtn.innerHTML = originalText;
         }
-        const blob = await zip.generateAsync({ type: 'blob' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = 'extracted_items.zip';
-        link.click();
-        URL.revokeObjectURL(link.href);
     });
 
     // ─── Progress helpers ───
@@ -814,6 +1069,24 @@
     function showMsg(msg, isError = false) {
         progressMsg.innerHTML = msg;
         progressMsg.className = isError ? 'progress-message error' : 'progress-message';
+    }
+
+    function showToast(text) {
+        toast.innerText = text;
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 2000);
+    }
+
+    async function copyToClipboard(canvas) {
+        try {
+            const blob = await new Promise(resolve => canvas.toBlob(resolve));
+            const item = new ClipboardItem({ [blob.type]: blob });
+            await navigator.clipboard.write([item]);
+            showToast("✨ Item copied to clipboard!");
+        } catch (err) {
+            console.error("Clipboard Error:", err);
+            showToast("❌ Failed to copy image");
+        }
     }
 
     // ─── Transparency detection ───
@@ -1126,16 +1399,29 @@
         const mainDisplay = document.createElement('canvas');
         mainDisplay.width = 256;
         mainDisplay.height = 256;
-        mainDisplay.style.borderRadius = '12px';
-        mainDisplay.style.border = '1px solid var(--border)';
-        mainDisplay.style.marginBottom = '16px';
-        mainDisplay.style.display = 'block';
-        mainDisplay.style.background = 'repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 16px 16px';
         const mCtx = mainDisplay.getContext('2d');
         if (qualityCanvases[selectedQuality]) {
             mCtx.drawImage(qualityCanvases[selectedQuality], 0, 0);
         }
-        card.appendChild(mainDisplay);
+
+        // Click-to-copy wrapper
+        const canvasContainer = document.createElement('div');
+        canvasContainer.className = 'canvas-container';
+        const copyOverlay = document.createElement('div');
+        copyOverlay.className = 'copy-overlay';
+        copyOverlay.innerText = '📋 Click to Copy';
+        
+        canvasContainer.appendChild(copyOverlay);
+        canvasContainer.appendChild(mainDisplay);
+        
+        canvasContainer.addEventListener('click', () => {
+            if (card._selectedCanvas) copyToClipboard(card._selectedCanvas);
+        });
+
+        card.appendChild(canvasContainer);
+
+        // Animation delay for staggering
+        card.style.animationDelay = `${(globalIndex % 6) * 0.1}s`;
 
         // Track selected canvas for download
         card._selectedCanvas = qualityCanvases[selectedQuality] || null;
