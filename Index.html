@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Item Extractor — Split & Transparify</title>
+    <meta name="description" content="Upload an image with 3 items, auto-split into 256x256 transparent PNGs. Works entirely in your browser.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg-primary: #0c0c18;
+            --bg-secondary: #14142a;
+            --bg-card: #1c1c38;
+            --bg-card-hover: #252548;
+            --accent: #6c5ce7;
+            --accent-glow: rgba(108, 92, 231, 0.35);
+            --accent-light: #a29bfe;
+            --success: #00cec9;
+            --success-glow: rgba(0, 206, 201, 0.3);
+            --warning: #fdcb6e;
+            --danger: #ff6b6b;
+            --text-primary: #f0f0ff;
+            --text-secondary: #8888aa;
+            --border: rgba(255, 255, 255, 0.06);
+            --radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            background-image:
+                radial-gradient(ellipse at 20% 0%, rgba(108, 92, 231, 0.08) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 100%, rgba(0, 206, 201, 0.06) 0%, transparent 60%);
+        }
+
+        .container {
+            max-width: 960px;
+            width: 100%;
+        }
+
+        /* ─── Header ─── */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-light), var(--success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            line-height: 1.6;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ─── Upload Area ─── */
+        .upload-zone {
+            border: 2px dashed rgba(108, 92, 231, 0.4);
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, var(--accent-glow), transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: var(--accent);
+            background: rgba(108, 92, 231, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(108, 92, 231, 0.15);
+        }
+
+        .upload-zone:hover::before, .upload-zone.drag-over::before {
+            opacity: 1;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            display: block;
+            position: relative;
+            z-index: 1;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .upload-zone h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone .browse-btn {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 10px 28px;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-zone:hover .browse-btn {
+            background: #7c6cf0;
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+
+        input[type="file"] { display: none; }
+
+        /* ─── Progress Steps ─── */
+        .progress-section {
+            display: none;
+            margin-top: 32px;
+        }
+
+        .progress-section.visible { display: block; }
+
+        .steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            transition: all 0.4s ease;
+        }
+
+        .step.active {
+            color: var(--accent-light);
+            background: rgba(108, 92, 231, 0.12);
+            border-color: rgba(108, 92, 231, 0.3);
+        }
+
+        .step.done {
+            color: var(--success);
+            background: rgba(0, 206, 201, 0.1);
+            border-color: rgba(0, 206, 201, 0.25);
+        }
+
+        .step-connector {
+            width: 20px;
+            height: 2px;
+            background: var(--border);
+            border-radius: 2px;
+            transition: background 0.4s ease;
+        }
+
+        .step-connector.done { background: var(--success); }
+
+        .progress-message {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .progress-message.error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        /* ─── Spinner ─── */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Preview ─── */
+        .preview-section {
+            display: none;
+            margin-top: 32px;
+            text-align: center;
+        }
+
+        .preview-section.visible { display: block; }
+
+        .preview-section h3 {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            object-fit: contain;
+        }
+
+        /* ─── Results ─── */
+        #results {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .item-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: var(--radius);
+            text-align: center;
+            transition: all 0.3s ease;
+            animation: cardIn 0.5s ease backwards;
+        }
+
+        .item-card:nth-child(1) { animation-delay: 0s; }
+        .item-card:nth-child(2) { animation-delay: 0.1s; }
+        .item-card:nth-child(3) { animation-delay: 0.2s; }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .item-card:hover {
+            background: var(--bg-card-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .item-card h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        /* Checkerboard for transparency */
+        .item-card canvas {
+            background: repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 16px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 22px;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            font-family: inherit;
+            width: 100%;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #7c6cf0;
+            box-shadow: 0 4px 20px var(--accent-glow);
+            transform: translateY(-1px);
+        }
+
+        /* ─── Download All ─── */
+        .download-all-section {
+            display: none;
+            text-align: center;
+            margin-top: 32px;
+        }
+
+        .download-all-section.visible { display: block; }
+
+        .download-all-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            color: white;
+            border: none;
+            padding: 14px 36px;
+            cursor: pointer;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 1.05rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.25);
+        }
+
+        .download-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(108, 92, 231, 0.35);
+        }
+
+        /* ─── Reset Button ─── */
+        .reset-section {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .reset-section.visible { display: block; }
+
+        .reset-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 10px 24px;
+            cursor: pointer;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .reset-btn:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+
+        /* ─── Footer ─── */
+        .footer {
+            margin-top: 60px;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 640px) {
+            .header h1 { font-size: 1.8rem; }
+            .steps { flex-direction: column; }
+            .step-connector { width: 2px; height: 12px; }
+            #results { flex-direction: column; align-items: center; }
+            .item-card { width: 100%; max-width: 300px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>✂️ Game Item Extractor</h1>
+        <p>Upload a screenshot with 3 items. This tool removes the background, splits each item, and exports them as <strong>256×256 transparent PNGs</strong>. Everything runs in your browser.</p>
+    </div>
+
+    <!-- Upload Zone -->
+    <div class="upload-zone" id="uploadZone">
+        <span class="upload-icon">📁</span>
+        <h3>Drop your image here</h3>
+        <span>or click to browse · PNG, JPG, WebP</span>
+        <div class="browse-btn">Choose File</div>
+    </div>
+    <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" />
+
+    <!-- Preview -->
+    <div class="preview-section" id="previewSection">
+        <h3>Uploaded Image</h3>
+        <img class="preview-img" id="previewImg" alt="Uploaded preview" />
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+        <div class="steps">
+            <div class="step" id="step1"><span class="step-icon">1</span> Analyzing</div>
+            <div class="step-connector" id="conn1"></div>
+            <div class="step" id="step2"><span class="step-icon">2</span> Background</div>
+            <div class="step-connector" id="conn2"></div>
+            <div class="step" id="step3"><span class="step-icon">3</span> Splitting</div>
+        </div>
+        <p class="progress-message" id="progressMsg"></p>
+    </div>
+
+    <!-- Results -->
+    <div id="results"></div>
+
+    <!-- Download All -->
+    <div class="download-all-section" id="downloadAllSection">
+        <button class="download-all-btn" id="downloadAllBtn">📦 Download All as ZIP</button>
+    </div>
+
+    <!-- Reset -->
+    <div class="reset-section" id="resetSection">
+        <button class="reset-btn" id="resetBtn">↻ Process Another Image</button>
+    </div>
+</div>
+
+<div class="footer">100% client-side · No uploads to any server · AI model cached in your browser</div>
+
+<script>
+    (async function() {
+    const { removeBackground: imglyRemoveBackground } = await import("https://esm.sh/@imgly/background-removal@1.7.0");
+    const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
+
+    // ─── DOM refs ───
+    const uploadZone      = document.getElementById('uploadZone');
+    const imageUpload     = document.getElementById('imageUpload');
+    const previewSection  = document.getElementById('previewSection');
+    const previewImg      = document.getElementById('previewImg');
+    const progressSection = document.getElementById('progressSection');
+    const progressMsg     = document.getElementById('progressMsg');
+    const resultsDiv      = document.getElementById('results');
+    const downloadAllSection = document.getElementById('downloadAllSection');
+    const downloadAllBtn  = document.getElementById('downloadAllBtn');
+    const resetSection    = document.getElementById('resetSection');
+    const resetBtn        = document.getElementById('resetBtn');
+    const steps           = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+    const connectors      = [document.getElementById('conn1'), document.getElementById('conn2')];
+
+    // Store final canvases for ZIP download
+    let finalCanvases = [];
+
+    // ─── Drag & Drop ───
+    uploadZone.addEventListener('click', () => imageUpload.click());
+
+    uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', () => {
+        uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+            processFile(file);
+        }
+    });
+
+    imageUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) processFile(file);
+    });
+
+    // ─── Reset ───
+    resetBtn.addEventListener('click', () => {
+        resultsDiv.innerHTML = '';
+        finalCanvases = [];
+        previewSection.classList.remove('visible');
+        progressSection.classList.remove('visible');
+        downloadAllSection.classList.remove('visible');
+        resetSection.classList.remove('visible');
+        uploadZone.style.display = '';
+        progressMsg.className = 'progress-message';
+        steps.forEach(s => { s.classList.remove('active', 'done'); });
+        connectors.forEach(c => c.classList.remove('done'));
+        imageUpload.value = '';
+    });
+
+    // ─── Download All as ZIP ───
+    downloadAllBtn.addEventListener('click', async () => {
+        const zip = new JSZip();
+        for (let i = 0; i < finalCanvases.length; i++) {
+            const dataUrl = finalCanvases[i].toDataURL('image/png');
+            const base64 = dataUrl.split(',')[1];
+            zip.file(`item_${i + 1}.png`, base64, { base64: true });
+        }
+        const blob = await zip.generateAsync({ type: 'blob' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'extracted_items.zip';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
+
+    // ─── Progress helpers ───
+    function setStep(stepIndex, state) {
+        // state: 'active' | 'done'
+        if (state === 'active') {
+            steps[stepIndex].classList.add('active');
+            steps[stepIndex].classList.remove('done');
+        } else if (state === 'done') {
+            steps[stepIndex].classList.remove('active');
+            steps[stepIndex].classList.add('done');
+            if (stepIndex < connectors.length) connectors[stepIndex].classList.add('done');
+        }
+    }
+
+    function showMsg(msg, isError = false) {
+        progressMsg.innerHTML = msg;
+        progressMsg.className = isError ? 'progress-message error' : 'progress-message';
+    }
+
+    // ─── Transparency detection ───
+    function isAlreadyTransparent(imageData) {
+        const data = imageData.data;
+        const total = data.length / 4;
+        let transparentCount = 0;
+        // Sample every 4th pixel for speed
+        for (let i = 0; i < total; i += 4) {
+            if (data[i * 4 + 3] < 10) transparentCount++;
+        }
+        const ratio = transparentCount / (total / 4);
+        return ratio > 0.15; // If >15% of sampled pixels are transparent
+    }
+
+    // ─── Bounding box finder ───
+    function getBoundingBox(imageData, width, height) {
+        const data = imageData.data;
+        let minX = width, minY = height, maxX = 0, maxY = 0;
+        let found = false;
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const alpha = data[(y * width + x) * 4 + 3];
+                if (alpha > 10) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                    found = true;
+                }
+            }
+        }
+
+        if (!found) return null;
+        return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+    }
+
+    // ─── Connected-component item detection via X-axis projection ───
+    function findItemRegions(imageData, width, height) {
+        const data = imageData.data;
+
+        // Build X-axis alpha projection: for each column, count non-transparent pixels
+        const xProjection = new Uint32Array(width);
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (data[(y * width + x) * 4 + 3] > 10) {
+                    xProjection[x]++;
+                }
+            }
+        }
+
+        // Find contiguous non-zero runs (item columns)
+        const regions = [];
+        let inRegion = false;
+        let regionStart = 0;
+
+        for (let x = 0; x <= width; x++) {
+            const val = x < width ? xProjection[x] : 0;
+            if (val > 0 && !inRegion) {
+                inRegion = true;
+                regionStart = x;
+            } else if (val === 0 && inRegion) {
+                inRegion = false;
+                regions.push({ startX: regionStart, endX: x - 1, width: x - regionStart });
+            }
+        }
+
+        if (regions.length === 0) return [];
+
+        // If we get exactly 3 regions, use them directly
+        if (regions.length === 3) return regions;
+
+        // If we get fewer than 3 (items touching), merge into groups and split evenly
+        if (regions.length < 3) {
+            // Merge all into one bounding region and split into 3 columns
+            const overallStart = regions[0].startX;
+            const overallEnd = regions[regions.length - 1].endX;
+            const totalW = overallEnd - overallStart + 1;
+            const third = Math.floor(totalW / 3);
+            return [
+                { startX: overallStart, endX: overallStart + third - 1, width: third },
+                { startX: overallStart + third, endX: overallStart + 2 * third - 1, width: third },
+                { startX: overallStart + 2 * third, endX: overallEnd, width: overallEnd - (overallStart + 2 * third) + 1 }
+            ];
+        }
+
+        // If more than 3 regions, merge nearby ones using gap analysis
+        // Sort regions by size of gap before them, keep smallest gaps merged
+        while (regions.length > 3) {
+            let smallestGap = Infinity;
+            let gapIndex = -1;
+            for (let i = 0; i < regions.length - 1; i++) {
+                const gap = regions[i + 1].startX - regions[i].endX;
+                if (gap < smallestGap) {
+                    smallestGap = gap;
+                    gapIndex = i;
+                }
+            }
+            // Merge region[gapIndex] and region[gapIndex + 1]
+            regions[gapIndex] = {
+                startX: regions[gapIndex].startX,
+                endX: regions[gapIndex + 1].endX,
+                width: regions[gapIndex + 1].endX - regions[gapIndex].startX + 1
+            };
+            regions.splice(gapIndex + 1, 1);
+        }
+
+        return regions;
+    }
+
+    // ─── Build 256x256 canvas from a region ───
+    function extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight) {
+        // Get bounding box of actual content within this region's columns
+        const regionData = srcCtx.getImageData(region.startX, 0, region.width, fullHeight);
+        const box = getBoundingBox(regionData, region.width, fullHeight);
+
+        if (!box) return null;
+
+        // Create final 256x256 canvas
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = 256;
+        finalCanvas.height = 256;
+        const finalCtx = finalCanvas.getContext('2d');
+
+        // Extract just the item
+        const itemCanvas = document.createElement('canvas');
+        itemCanvas.width = box.width;
+        itemCanvas.height = box.height;
+        const itemCtx = itemCanvas.getContext('2d');
+        itemCtx.putImageData(
+            srcCtx.getImageData(region.startX + box.x, box.y, box.width, box.height),
+            0, 0
+        );
+
+        // Scale to fit within 240x240 (8px padding on each side), preserve aspect ratio
+        const maxFit = 240;
+        const scale = Math.min(maxFit / box.width, maxFit / box.height);
+        const newW = box.width * scale;
+        const newH = box.height * scale;
+        const dx = (256 - newW) / 2;
+        const dy = (256 - newH) / 2;
+
+        finalCtx.drawImage(itemCanvas, 0, 0, box.width, box.height, dx, dy, newW, newH);
+        return finalCanvas;
+    }
+
+    // ─── Create result card ───
+    function createItemCard(canvas, index) {
+        const card = document.createElement('div');
+        card.className = 'item-card';
+
+        const title = document.createElement('h3');
+        title.innerText = `Item ${index}`;
+
+        const downloadBtn = document.createElement('button');
+        downloadBtn.className = 'download-btn';
+        downloadBtn.innerHTML = '📥 Download PNG';
+        downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.download = `item_${index}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+
+        card.appendChild(title);
+        card.appendChild(canvas);
+        card.appendChild(downloadBtn);
+        resultsDiv.appendChild(card);
+    }
+
+    // ─── Main processing pipeline ───
+    async function processFile(file) {
+        // Reset state
+        resultsDiv.innerHTML = '';
+        finalCanvases = [];
+        downloadAllSection.classList.remove('visible');
+        resetSection.classList.remove('visible');
+        steps.forEach(s => s.classList.remove('active', 'done'));
+        connectors.forEach(c => c.classList.remove('done'));
+
+        // Show preview
+        const previewUrl = URL.createObjectURL(file);
+        previewImg.src = previewUrl;
+        previewSection.classList.add('visible');
+
+        // Hide upload, show progress
+        uploadZone.style.display = 'none';
+        progressSection.classList.add('visible');
+
+        try {
+            // ── Step 1: Analyze transparency ──
+            setStep(0, 'active');
+            showMsg('<span class="spinner"></span> Analyzing image for transparency...');
+
+            const img = new Image();
+            img.src = previewUrl;
+            await new Promise(resolve => img.onload = resolve);
+
+            const analyzeCanvas = document.createElement('canvas');
+            analyzeCanvas.width = img.width;
+            analyzeCanvas.height = img.height;
+            const analyzeCtx = analyzeCanvas.getContext('2d');
+            analyzeCtx.drawImage(img, 0, 0);
+            const fullData = analyzeCtx.getImageData(0, 0, img.width, img.height);
+
+            const alreadyTransparent = isAlreadyTransparent(fullData);
+            setStep(0, 'done');
+
+            // ── Step 2: Background removal (if needed) ──
+            setStep(1, 'active');
+            let processedImg;
+
+            if (alreadyTransparent) {
+                showMsg('✅ Image already has transparency — skipping background removal!');
+                processedImg = img;
+                await new Promise(r => setTimeout(r, 600)); // Brief pause so user can read
+            } else {
+                showMsg('<span class="spinner"></span> Removing background with AI...<br><small style="color:var(--text-secondary)">First run downloads a ~40MB model (cached afterward)</small>');
+                const imageUrl = URL.createObjectURL(file);
+                const transparentBlob = await imglyRemoveBackground(imageUrl);
+                const transparentUrl = URL.createObjectURL(transparentBlob);
+                processedImg = new Image();
+                processedImg.src = transparentUrl;
+                await new Promise(resolve => processedImg.onload = resolve);
+            }
+
+            setStep(1, 'done');
+
+            // ── Step 3: Split items ──
+            setStep(2, 'active');
+            showMsg('<span class="spinner"></span> Detecting and splitting items...');
+
+            const mainCanvas = document.createElement('canvas');
+            mainCanvas.width = processedImg.width;
+            mainCanvas.height = processedImg.height;
+            const mainCtx = mainCanvas.getContext('2d');
+            mainCtx.drawImage(processedImg, 0, 0);
+
+            const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);
+            const regions = findItemRegions(mainData, processedImg.width, processedImg.height);
+
+            let itemCount = 0;
+            for (let i = 0; i < regions.length; i++) {
+                const canvas = extractItemToCanvas(mainCanvas, mainCtx, regions[i], processedImg.height);
+                if (canvas) {
+                    itemCount++;
+                    finalCanvases.push(canvas);
+                    createItemCard(canvas, itemCount);
+                }
+            }
+
+            setStep(2, 'done');
+
+            if (itemCount === 0) {
+                showMsg('❌ Could not detect any items. Make sure items are distinct and visible.', true);
+            } else {
+                showMsg(`✅ Done! Extracted <strong>${itemCount}</strong> item${itemCount > 1 ? 's' : ''} as 256×256 transparent PNGs.`);
+                if (itemCount > 1) downloadAllSection.classList.add('visible');
+                resetSection.classList.add('visible');
+            }
+
+        } catch (error) {
+            console.error(error);
+            showMsg('❌ Error processing image. Check the browser console for details.', true);
+            resetSection.classList.add('visible');
+        }
+    }
+    })();
+</script>
+</body>
+</html>
