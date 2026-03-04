@@ -583,6 +583,14 @@
             border-color: var(--success);
         }
 
+        .styled-select {
+            background: transparent; border: 1px solid var(--border); color: var(--text-primary);
+            padding: 8px 12px; border-radius: 8px; font-family: inherit; font-size: 0.85rem;
+            cursor: pointer; outline: none;
+        }
+        .styled-select option { background: var(--bg-secondary); color: var(--text-primary); }
+        .setting-group { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+
         /* ─── Footer ─── */
         .footer {
             margin-top: 60px;
@@ -614,11 +622,25 @@
 
     <!-- Settings Bar -->
     <div class="settings-bar" id="settingsBar">
-        <label>Rendering Quality</label>
-        <div class="quality-toggle" id="qualityToggle">
-            <button data-quality="off" class="active">Pixelated</button>
-            <button data-quality="medium">Smooth</button>
-            <button data-quality="high">Ultra Smooth</button>
+        <div class="setting-group">
+            <label>Items to Extract</label>
+            <select id="itemCountSelect" class="styled-select">
+                <option value="auto" selected>Auto Detect (Default)</option>
+                <option value="1">1 Item</option>
+                <option value="2">2 Items</option>
+                <option value="3">3 Items</option>
+                <option value="4">4 Items</option>
+                <option value="5">5 Items</option>
+                <option value="6">6 Items</option>
+            </select>
+        </div>
+        <div class="setting-group">
+            <label>Rendering Quality</label>
+            <div class="quality-toggle" id="qualityToggle">
+                <button data-quality="off" class="active">Pixelated</button>
+                <button data-quality="medium">Smooth</button>
+                <button data-quality="high">Ultra Smooth</button>
+            </div>
         </div>
     </div>
 
@@ -683,12 +705,14 @@
     const resetSection    = document.getElementById('resetSection');
     const resetBtn        = document.getElementById('resetBtn');
     const qualityToggle   = document.getElementById('qualityToggle');
+    const itemCountSelect = document.getElementById('itemCountSelect');
     const steps           = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors      = [document.getElementById('conn1'), document.getElementById('conn2')];
 
     // Store final canvases for ZIP download (each entry: { canvas, quality })
     let finalCanvases = [];
     let currentQuality = 'off'; // 'off' | 'medium' | 'high'
+    let currentFiles = []; // To allow re-running when settings change
 
     // ─── Quality Toggle ───
     qualityToggle.addEventListener('click', (e) => {
@@ -697,6 +721,13 @@
         qualityToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentQuality = btn.dataset.quality;
+    });
+
+    // ─── Settings Auto-Update ───
+    itemCountSelect.addEventListener('change', () => {
+        if (currentFiles.length > 0) {
+            processAllFiles(currentFiles);
+        }
     });
 
     // ─── Drag & Drop ───
@@ -715,18 +746,25 @@
         e.preventDefault();
         uploadZone.classList.remove('drag-over');
         const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-        if (files.length > 0) processAllFiles(files);
+        if (files.length > 0) {
+            currentFiles = files;
+            processAllFiles(files);
+        }
     });
 
     imageUpload.addEventListener('change', (e) => {
         const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
-        if (files.length > 0) processAllFiles(files);
+        if (files.length > 0) {
+            currentFiles = files;
+            processAllFiles(files);
+        }
     });
 
     // ─── Reset ───
     resetBtn.addEventListener('click', () => {
         resultsDiv.innerHTML = '';
         finalCanvases = [];
+        currentFiles = [];
         previewStrip.innerHTML = '';
         previewSection.classList.remove('visible');
         progressSection.classList.remove('visible');
@@ -737,6 +775,7 @@
         steps.forEach(s => { s.classList.remove('active', 'done'); });
         connectors.forEach(c => c.classList.remove('done'));
         imageUpload.value = '';
+        itemCountSelect.value = 'auto';
     });
 
     // ─── Download All as ZIP ───
@@ -812,75 +851,171 @@
         return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
     }
 
-    // ─── Connected-component item detection via X-axis projection ───
-    function findItemRegions(imageData, width, height) {
+    // ─── True 2D Connected Components Detection (Flood Fill) ───
+    function findItemRegions(imageData, width, height, targetCountStr) {
         const data = imageData.data;
+        const visited = new Uint8Array(width * height);
+        const components = [];
 
-        const xProjection = new Uint32Array(width);
+        // Helper to check if pixel is opaque
+        const isOpaque = (idx) => data[idx * 4 + 3] > 10;
+
+        // Iterative flood fill to prevent call stack size exceeded
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
-                if (data[(y * width + x) * 4 + 3] > 10) {
-                    xProjection[x]++;
+                const idx = y * width + x;
+                if (!visited[idx] && isOpaque(idx)) {
+                    // Start new component
+                    let minX = width, minY = height, maxX = 0, maxY = 0;
+                    let pixelCount = 0;
+                    
+                    const stack = [idx];
+                    visited[idx] = 1;
+
+                    while (stack.length > 0) {
+                        const curr = stack.pop();
+                        const cx = curr % width;
+                        const cy = Math.floor(curr / width);
+
+                        if (cx < minX) minX = cx;
+                        if (cx > maxX) maxX = cx;
+                        if (cy < minY) minY = cy;
+                        if (cy > maxY) maxY = cy;
+                        pixelCount++;
+
+                        // Check neighbors (4-way connectivity)
+                        const neighbors = [
+                            curr - width, // Up
+                            curr + width, // Down
+                            curr - 1,     // Left
+                            curr + 1      // Right
+                        ];
+
+                        for (const n of neighbors) {
+                            // Bounds checks for Left/Right wrapping
+                            if (n >= 0 && n < width * height && !visited[n]) {
+                                const nx = n % width;
+                                if ((curr % width === 0 && nx === width - 1) || (curr % width === width - 1 && nx === 0)) {
+                                    continue; // Wrapped around edge
+                                }
+                                if (isOpaque(n)) {
+                                    visited[n] = 1;
+                                    stack.push(n);
+                                }
+                            }
+                        }
+                    }
+
+                    // Ignore tiny noise fragments (< 0.1% of overall area or < 50 pixels)
+                    if (pixelCount > 50 && (pixelCount / (width * height)) > 0.001) {
+                        components.push({
+                            x: minX,
+                            y: minY,
+                            width: maxX - minX + 1,
+                            height: maxY - minY + 1,
+                            pixelCount: pixelCount
+                        });
+                    }
                 }
             }
         }
 
-        const regions = [];
-        let inRegion = false;
-        let regionStart = 0;
-
-        for (let x = 0; x <= width; x++) {
-            const val = x < width ? xProjection[x] : 0;
-            if (val > 0 && !inRegion) {
-                inRegion = true;
-                regionStart = x;
-            } else if (val === 0 && inRegion) {
-                inRegion = false;
-                regions.push({ startX: regionStart, endX: x - 1, width: x - regionStart });
+        // Sort by X then Y for a logical reading order (top-left to bottom-right)
+        components.sort((a, b) => {
+            // If they are on the same roughly row (within 10% of image height) sort by X
+            if (Math.abs(a.y - b.y) < height * 0.1) {
+                return a.x - b.x;
             }
+            return a.y - b.y;
+        });
+
+        if (components.length === 0) return [];
+        if (targetCountStr === 'auto') return components;
+
+        const targetCount = parseInt(targetCountStr, 10);
+        
+        // If we found EXACTLY the right amount, perfect.
+        if (components.length === targetCount) return components;
+
+        // If we found MORE than target, try merging closest ones (usually happens if an item is slightly disconnected)
+        while (components.length > targetCount) {
+             let minDist = Infinity;
+             let mergeI = -1;
+             let mergeJ = -1;
+
+             for(let i=0; i<components.length; i++) {
+                 for(let j=i+1; j<components.length; j++) {
+                     const c1 = components[i];
+                     const c2 = components[j];
+                     
+                     // Distance between centers
+                     const cx1 = c1.x + c1.width/2;
+                     const cy1 = c1.y + c1.height/2;
+                     const cx2 = c2.x + c2.width/2;
+                     const cy2 = c2.y + c2.height/2;
+                     const dist = Math.sqrt((cx1-cx2)**2 + (cy1-cy2)**2);
+
+                     if(dist < minDist) {
+                         minDist = dist;
+                         mergeI = i;
+                         mergeJ = j;
+                     }
+                 }
+             }
+
+             // Merge I and J
+             const c1 = components[mergeI];
+             const c2 = components[mergeJ];
+             const nx = Math.min(c1.x, c2.x);
+             const ny = Math.min(c1.y, c2.y);
+             const nMaxX = Math.max(c1.x + c1.width, c2.x + c2.width);
+             const nMaxY = Math.max(c1.y + c1.height, c2.y + c2.height);
+
+             components[mergeI] = {
+                 x: nx,
+                 y: ny,
+                 width: nMaxX - nx,
+                 height: nMaxY - ny,
+                 pixelCount: c1.pixelCount + c2.pixelCount
+             };
+
+             components.splice(mergeJ, 1);
         }
 
-        if (regions.length === 0) return [];
-        if (regions.length === 3) return regions;
-
-        if (regions.length < 3) {
-            const overallStart = regions[0].startX;
-            const overallEnd = regions[regions.length - 1].endX;
-            const totalW = overallEnd - overallStart + 1;
-            const third = Math.floor(totalW / 3);
-            return [
-                { startX: overallStart, endX: overallStart + third - 1, width: third },
-                { startX: overallStart + third, endX: overallStart + 2 * third - 1, width: third },
-                { startX: overallStart + 2 * third, endX: overallEnd, width: overallEnd - (overallStart + 2 * third) + 1 }
-            ];
-        }
-
-        while (regions.length > 3) {
-            let smallestGap = Infinity;
-            let gapIndex = -1;
-            for (let i = 0; i < regions.length - 1; i++) {
-                const gap = regions[i + 1].startX - regions[i].endX;
-                if (gap < smallestGap) {
-                    smallestGap = gap;
-                    gapIndex = i;
+        // If we found FEWER than expected, try to split the largest component cleanly
+        // (This gets tricky on 2D layouts so we just split vertically as a fallback)
+        while (components.length < targetCount) {
+            let largestIdx = 0;
+            let maxArea = 0;
+            for (let i = 0; i < components.length; i++) {
+                const area = components[i].width * components[i].height;
+                if (area > maxArea) {
+                    maxArea = area;
+                    largestIdx = i;
                 }
             }
-            regions[gapIndex] = {
-                startX: regions[gapIndex].startX,
-                endX: regions[gapIndex + 1].endX,
-                width: regions[gapIndex + 1].endX - regions[gapIndex].startX + 1
-            };
-            regions.splice(gapIndex + 1, 1);
+
+            const toSplit = components[largestIdx];
+            
+            // Split along the longest axis
+            if(toSplit.width > toSplit.height) {
+                const half1Width = Math.floor(toSplit.width / 2);
+                const r1 = { x: toSplit.x, y: toSplit.y, width: half1Width, height: toSplit.height };
+                const r2 = { x: toSplit.x + half1Width, y: toSplit.y, width: toSplit.width - half1Width, height: toSplit.height };
+                components.splice(largestIdx, 1, r1, r2);
+            } else {
+                const half1Height = Math.floor(toSplit.height / 2);
+                const r1 = { x: toSplit.x, y: toSplit.y, width: toSplit.width, height: half1Height };
+                const r2 = { x: toSplit.x, y: toSplit.y + half1Height, width: toSplit.width, height: toSplit.height - half1Height };
+                components.splice(largestIdx, 1, r1, r2);
+            }
         }
 
-        return regions;
+        return components;
     }
 
-    // ─── Build 256x256 canvas from a region with quality setting ───
-    function extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight, quality) {
-        const regionData = srcCtx.getImageData(region.startX, 0, region.width, fullHeight);
-        const box = getBoundingBox(regionData, region.width, fullHeight);
-
+    // ─── Build 256x256 canvas from a 2D bounding box ───
+    function extractItemToCanvas(srcCanvas, srcCtx, box, quality) {
         if (!box) return null;
 
         const finalCanvas = document.createElement('canvas');
@@ -896,13 +1031,13 @@
             finalCtx.imageSmoothingQuality = quality; // 'medium' or 'high'
         }
 
-        // Extract just the item
+        // Extract just the item based on the 2D bounding box
         const itemCanvas = document.createElement('canvas');
         itemCanvas.width = box.width;
         itemCanvas.height = box.height;
         const itemCtx = itemCanvas.getContext('2d');
         itemCtx.putImageData(
-            srcCtx.getImageData(region.startX + box.x, box.y, box.width, box.height),
+            srcCtx.getImageData(box.x, box.y, box.width, box.height),
             0, 0
         );
 
@@ -919,7 +1054,7 @@
     }
 
     // ─── Create result card with quality comparison ───
-    function createItemCard(srcCanvas, srcCtx, region, fullHeight, globalIndex) {
+    function createItemCard(srcCanvas, srcCtx, box, globalIndex) {
         const card = document.createElement('div');
         card.className = 'item-card';
 
@@ -942,7 +1077,7 @@
         let downloadBtn;
 
         qualities.forEach((q, idx) => {
-            const canvas = extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight, q.key);
+            const canvas = extractItemToCanvas(srcCanvas, srcCtx, box, q.key);
             if (!canvas) return;
             qualityCanvases[q.key] = canvas;
 
@@ -1153,12 +1288,13 @@
         mainCtx.drawImage(processedImg, 0, 0);
 
         const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);
-        const regions = findItemRegions(mainData, processedImg.width, processedImg.height);
+        const targetCountStr = document.getElementById('itemCountSelect').value;
+        const regions = findItemRegions(mainData, processedImg.width, processedImg.height, targetCountStr);
 
         let itemCount = 0;
         const startIndex = finalCanvases.length;
         for (let i = 0; i < regions.length; i++) {
-            const success = createItemCard(mainCanvas, mainCtx, regions[i], processedImg.height, startIndex + itemCount + 1);
+            const success = createItemCard(mainCanvas, mainCtx, regions[i], startIndex + itemCount + 1);
             if (success) itemCount++;
         }
 
