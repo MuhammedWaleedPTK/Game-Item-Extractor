@@ -393,6 +393,149 @@
             color: var(--text-primary);
         }
 
+        /* ─── Settings Bar ─── */
+        .settings-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-bottom: 24px;
+            padding: 14px 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+        }
+
+        .settings-bar label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .quality-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .quality-toggle button {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .quality-toggle button:hover {
+            color: var(--text-primary);
+        }
+
+        .quality-toggle button.active {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        /* ─── Quality comparison in result cards ─── */
+        .quality-strip {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 14px;
+        }
+
+        .quality-option {
+            cursor: pointer;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 6px;
+            transition: all 0.25s ease;
+            text-align: center;
+        }
+
+        .quality-option:hover {
+            border-color: rgba(108, 92, 231, 0.4);
+        }
+
+        .quality-option.selected {
+            border-color: var(--accent);
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+
+        .quality-option canvas {
+            display: block;
+            border-radius: 6px;
+            background: repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 10px 10px;
+        }
+
+        .quality-option .q-label {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .quality-option.selected .q-label {
+            color: var(--accent-light);
+        }
+
+        /* ─── Image Group Header ─── */
+        .image-group-header {
+            width: 100%;
+            text-align: center;
+            margin-top: 28px;
+            margin-bottom: 8px;
+            padding: 10px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .image-group-header h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent-light);
+        }
+
+        /* ─── Preview Thumbnails ─── */
+        .preview-strip {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .preview-thumb {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .preview-thumb.processing {
+            opacity: 1;
+            border-color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .preview-thumb.done {
+            opacity: 1;
+            border-color: var(--success);
+        }
+
         /* ─── Footer ─── */
         .footer {
             margin-top: 60px;
@@ -406,6 +549,7 @@
         @media (max-width: 640px) {
             .header h1 { font-size: 1.8rem; }
             .steps { flex-direction: column; }
+            .settings-bar { flex-direction: column; gap: 8px; }
             .step-connector { width: 2px; height: 12px; }
             #results { flex-direction: column; align-items: center; }
             .item-card { width: 100%; max-width: 300px; }
@@ -418,22 +562,32 @@
     <!-- Header -->
     <div class="header">
         <h1>✂️ Game Item Extractor</h1>
-        <p>Upload a screenshot with 3 items. This tool removes the background, splits each item, and exports them as <strong>256×256 transparent PNGs</strong>. Everything runs in your browser.</p>
+        <p>Upload one or more screenshots with items. This tool removes the background, splits each item, and exports them as <strong>256×256 transparent PNGs</strong>. Everything runs in your browser.</p>
+    </div>
+
+    <!-- Settings Bar -->
+    <div class="settings-bar" id="settingsBar">
+        <label>Rendering Quality</label>
+        <div class="quality-toggle" id="qualityToggle">
+            <button data-quality="off" class="active">Pixelated</button>
+            <button data-quality="medium">Smooth</button>
+            <button data-quality="high">Ultra Smooth</button>
+        </div>
     </div>
 
     <!-- Upload Zone -->
     <div class="upload-zone" id="uploadZone">
         <span class="upload-icon">📁</span>
-        <h3>Drop your image here</h3>
-        <span>or click to browse · PNG, JPG, WebP</span>
-        <div class="browse-btn">Choose File</div>
+        <h3>Drop your images here</h3>
+        <span>or click to browse · PNG, JPG, WebP · Multiple files supported</span>
+        <div class="browse-btn">Choose Files</div>
     </div>
-    <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" />
+    <input type="file" id="imageUpload" accept="image/png, image/jpeg, image/webp" multiple />
 
     <!-- Preview -->
     <div class="preview-section" id="previewSection">
-        <h3>Uploaded Image</h3>
-        <img class="preview-img" id="previewImg" alt="Uploaded preview" />
+        <h3>Uploaded Images</h3>
+        <div class="preview-strip" id="previewStrip"></div>
     </div>
 
     <!-- Progress -->
@@ -473,7 +627,7 @@
     const uploadZone      = document.getElementById('uploadZone');
     const imageUpload     = document.getElementById('imageUpload');
     const previewSection  = document.getElementById('previewSection');
-    const previewImg      = document.getElementById('previewImg');
+    const previewStrip    = document.getElementById('previewStrip');
     const progressSection = document.getElementById('progressSection');
     const progressMsg     = document.getElementById('progressMsg');
     const resultsDiv      = document.getElementById('results');
@@ -481,11 +635,22 @@
     const downloadAllBtn  = document.getElementById('downloadAllBtn');
     const resetSection    = document.getElementById('resetSection');
     const resetBtn        = document.getElementById('resetBtn');
+    const qualityToggle   = document.getElementById('qualityToggle');
     const steps           = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors      = [document.getElementById('conn1'), document.getElementById('conn2')];
 
-    // Store final canvases for ZIP download
+    // Store final canvases for ZIP download (each entry: { canvas, quality })
     let finalCanvases = [];
+    let currentQuality = 'off'; // 'off' | 'medium' | 'high'
+
+    // ─── Quality Toggle ───
+    qualityToggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        qualityToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentQuality = btn.dataset.quality;
+    });
 
     // ─── Drag & Drop ───
     uploadZone.addEventListener('click', () => imageUpload.click());
@@ -502,21 +667,20 @@
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadZone.classList.remove('drag-over');
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('image/')) {
-            processFile(file);
-        }
+        const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) processAllFiles(files);
     });
 
     imageUpload.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) processFile(file);
+        const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+        if (files.length > 0) processAllFiles(files);
     });
 
     // ─── Reset ───
     resetBtn.addEventListener('click', () => {
         resultsDiv.innerHTML = '';
         finalCanvases = [];
+        previewStrip.innerHTML = '';
         previewSection.classList.remove('visible');
         progressSection.classList.remove('visible');
         downloadAllSection.classList.remove('visible');
@@ -546,7 +710,6 @@
 
     // ─── Progress helpers ───
     function setStep(stepIndex, state) {
-        // state: 'active' | 'done'
         if (state === 'active') {
             steps[stepIndex].classList.add('active');
             steps[stepIndex].classList.remove('done');
@@ -555,6 +718,11 @@
             steps[stepIndex].classList.add('done');
             if (stepIndex < connectors.length) connectors[stepIndex].classList.add('done');
         }
+    }
+
+    function resetSteps() {
+        steps.forEach(s => s.classList.remove('active', 'done'));
+        connectors.forEach(c => c.classList.remove('done'));
     }
 
     function showMsg(msg, isError = false) {
@@ -567,12 +735,11 @@
         const data = imageData.data;
         const total = data.length / 4;
         let transparentCount = 0;
-        // Sample every 4th pixel for speed
         for (let i = 0; i < total; i += 4) {
             if (data[i * 4 + 3] < 10) transparentCount++;
         }
         const ratio = transparentCount / (total / 4);
-        return ratio > 0.15; // If >15% of sampled pixels are transparent
+        return ratio > 0.15;
     }
 
     // ─── Bounding box finder ───
@@ -602,7 +769,6 @@
     function findItemRegions(imageData, width, height) {
         const data = imageData.data;
 
-        // Build X-axis alpha projection: for each column, count non-transparent pixels
         const xProjection = new Uint32Array(width);
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
@@ -612,7 +778,6 @@
             }
         }
 
-        // Find contiguous non-zero runs (item columns)
         const regions = [];
         let inRegion = false;
         let regionStart = 0;
@@ -629,13 +794,9 @@
         }
 
         if (regions.length === 0) return [];
-
-        // If we get exactly 3 regions, use them directly
         if (regions.length === 3) return regions;
 
-        // If we get fewer than 3 (items touching), merge into groups and split evenly
         if (regions.length < 3) {
-            // Merge all into one bounding region and split into 3 columns
             const overallStart = regions[0].startX;
             const overallEnd = regions[regions.length - 1].endX;
             const totalW = overallEnd - overallStart + 1;
@@ -647,8 +808,6 @@
             ];
         }
 
-        // If more than 3 regions, merge nearby ones using gap analysis
-        // Sort regions by size of gap before them, keep smallest gaps merged
         while (regions.length > 3) {
             let smallestGap = Infinity;
             let gapIndex = -1;
@@ -659,7 +818,6 @@
                     gapIndex = i;
                 }
             }
-            // Merge region[gapIndex] and region[gapIndex + 1]
             regions[gapIndex] = {
                 startX: regions[gapIndex].startX,
                 endX: regions[gapIndex + 1].endX,
@@ -671,19 +829,25 @@
         return regions;
     }
 
-    // ─── Build 256x256 canvas from a region ───
-    function extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight) {
-        // Get bounding box of actual content within this region's columns
+    // ─── Build 256x256 canvas from a region with quality setting ───
+    function extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight, quality) {
         const regionData = srcCtx.getImageData(region.startX, 0, region.width, fullHeight);
         const box = getBoundingBox(regionData, region.width, fullHeight);
 
         if (!box) return null;
 
-        // Create final 256x256 canvas
         const finalCanvas = document.createElement('canvas');
         finalCanvas.width = 256;
         finalCanvas.height = 256;
         const finalCtx = finalCanvas.getContext('2d');
+
+        // Apply quality setting
+        if (quality === 'off') {
+            finalCtx.imageSmoothingEnabled = false;
+        } else {
+            finalCtx.imageSmoothingEnabled = true;
+            finalCtx.imageSmoothingQuality = quality; // 'medium' or 'high'
+        }
 
         // Extract just the item
         const itemCanvas = document.createElement('canvas');
@@ -695,7 +859,7 @@
             0, 0
         );
 
-        // Scale to fit within 240x240 (8px padding on each side), preserve aspect ratio
+        // Scale to fit within 240x240, preserve aspect ratio
         const maxFit = 240;
         const scale = Math.min(maxFit / box.width, maxFit / box.height);
         const newW = box.width * scale;
@@ -707,127 +871,257 @@
         return finalCanvas;
     }
 
-    // ─── Create result card ───
-    function createItemCard(canvas, index) {
+    // ─── Create result card with quality comparison ───
+    function createItemCard(srcCanvas, srcCtx, region, fullHeight, globalIndex) {
         const card = document.createElement('div');
         card.className = 'item-card';
 
         const title = document.createElement('h3');
-        title.innerText = `Item ${index}`;
+        title.innerText = `Item ${globalIndex}`;
+        card.appendChild(title);
 
-        const downloadBtn = document.createElement('button');
+        // Generate all 3 quality versions
+        const qualities = [
+            { key: 'off', label: 'Pixelated' },
+            { key: 'medium', label: 'Smooth' },
+            { key: 'high', label: 'Ultra' }
+        ];
+
+        const qualityCanvases = {};
+        const strip = document.createElement('div');
+        strip.className = 'quality-strip';
+
+        let selectedQuality = currentQuality;
+        let downloadBtn;
+
+        qualities.forEach((q, idx) => {
+            const canvas = extractItemToCanvas(srcCanvas, srcCtx, region, fullHeight, q.key);
+            if (!canvas) return;
+            qualityCanvases[q.key] = canvas;
+
+            // Create small preview (80x80)
+            const previewCanvas = document.createElement('canvas');
+            previewCanvas.width = 80;
+            previewCanvas.height = 80;
+            const pCtx = previewCanvas.getContext('2d');
+            if (q.key === 'off') {
+                pCtx.imageSmoothingEnabled = false;
+            } else {
+                pCtx.imageSmoothingEnabled = true;
+                pCtx.imageSmoothingQuality = q.key;
+            }
+            pCtx.drawImage(canvas, 0, 0, 256, 256, 0, 0, 80, 80);
+
+            const option = document.createElement('div');
+            option.className = 'quality-option' + (q.key === selectedQuality ? ' selected' : '');
+            option.appendChild(previewCanvas);
+
+            const label = document.createElement('div');
+            label.className = 'q-label';
+            label.textContent = q.label;
+            option.appendChild(label);
+
+            option.addEventListener('click', () => {
+                strip.querySelectorAll('.quality-option').forEach(o => o.classList.remove('selected'));
+                option.classList.add('selected');
+                selectedQuality = q.key;
+                // Update the main canvas display
+                mainDisplay.width = 256;
+                mainDisplay.height = 256;
+                const mCtx = mainDisplay.getContext('2d');
+                mCtx.clearRect(0, 0, 256, 256);
+                mCtx.drawImage(qualityCanvases[q.key], 0, 0);
+                // Update which canvas the download button uses
+                card._selectedCanvas = qualityCanvases[q.key];
+            });
+
+            strip.appendChild(option);
+        });
+
+        card.appendChild(strip);
+
+        // Main display canvas (shows selected quality at full size)
+        const mainDisplay = document.createElement('canvas');
+        mainDisplay.width = 256;
+        mainDisplay.height = 256;
+        mainDisplay.style.borderRadius = '12px';
+        mainDisplay.style.border = '1px solid var(--border)';
+        mainDisplay.style.marginBottom = '16px';
+        mainDisplay.style.display = 'block';
+        mainDisplay.style.background = 'repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 16px 16px';
+        const mCtx = mainDisplay.getContext('2d');
+        if (qualityCanvases[selectedQuality]) {
+            mCtx.drawImage(qualityCanvases[selectedQuality], 0, 0);
+        }
+        card.appendChild(mainDisplay);
+
+        // Track selected canvas for download
+        card._selectedCanvas = qualityCanvases[selectedQuality] || null;
+
+        downloadBtn = document.createElement('button');
         downloadBtn.className = 'download-btn';
         downloadBtn.innerHTML = '📥 Download PNG';
         downloadBtn.onclick = () => {
+            const c = card._selectedCanvas;
+            if (!c) return;
             const link = document.createElement('a');
-            link.download = `item_${index}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.download = `item_${globalIndex}.png`;
+            link.href = c.toDataURL('image/png');
             link.click();
         };
-
-        card.appendChild(title);
-        card.appendChild(canvas);
         card.appendChild(downloadBtn);
+
         resultsDiv.appendChild(card);
+
+        // Store the default quality canvas for ZIP
+        if (qualityCanvases[selectedQuality]) {
+            finalCanvases.push(qualityCanvases[selectedQuality]);
+        }
+
+        return !!qualityCanvases[selectedQuality];
     }
 
-    // ─── Main processing pipeline ───
-    async function processFile(file) {
+    // ─── Process all files sequentially ───
+    async function processAllFiles(files) {
         // Reset state
         resultsDiv.innerHTML = '';
         finalCanvases = [];
+        previewStrip.innerHTML = '';
         downloadAllSection.classList.remove('visible');
         resetSection.classList.remove('visible');
-        steps.forEach(s => s.classList.remove('active', 'done'));
-        connectors.forEach(c => c.classList.remove('done'));
 
-        // Show preview
-        const previewUrl = URL.createObjectURL(file);
-        previewImg.src = previewUrl;
+        // Show preview thumbnails
+        const thumbs = [];
+        for (const file of files) {
+            const url = URL.createObjectURL(file);
+            const thumb = document.createElement('img');
+            thumb.src = url;
+            thumb.className = 'preview-thumb';
+            thumb.alt = file.name;
+            previewStrip.appendChild(thumb);
+            thumbs.push(thumb);
+        }
         previewSection.classList.add('visible');
 
         // Hide upload, show progress
         uploadZone.style.display = 'none';
         progressSection.classList.add('visible');
 
-        try {
-            // ── Step 1: Analyze transparency ──
-            setStep(0, 'active');
-            showMsg('<span class="spinner"></span> Analyzing image for transparency...');
+        let globalItemCount = 0;
 
-            const img = new Image();
-            img.src = previewUrl;
-            await new Promise(resolve => img.onload = resolve);
+        for (let fileIdx = 0; fileIdx < files.length; fileIdx++) {
+            const file = files[fileIdx];
 
-            const analyzeCanvas = document.createElement('canvas');
-            analyzeCanvas.width = img.width;
-            analyzeCanvas.height = img.height;
-            const analyzeCtx = analyzeCanvas.getContext('2d');
-            analyzeCtx.drawImage(img, 0, 0);
-            const fullData = analyzeCtx.getImageData(0, 0, img.width, img.height);
+            // Highlight current thumbnail
+            thumbs.forEach(t => t.classList.remove('processing'));
+            thumbs[fileIdx].classList.add('processing');
 
-            const alreadyTransparent = isAlreadyTransparent(fullData);
-            setStep(0, 'done');
-
-            // ── Step 2: Background removal (if needed) ──
-            setStep(1, 'active');
-            let processedImg;
-
-            if (alreadyTransparent) {
-                showMsg('✅ Image already has transparency — skipping background removal!');
-                processedImg = img;
-                await new Promise(r => setTimeout(r, 600)); // Brief pause so user can read
-            } else {
-                showMsg('<span class="spinner"></span> Removing background with AI...<br><small style="color:var(--text-secondary)">First run downloads a ~40MB model (cached afterward)</small>');
-                const imageUrl = URL.createObjectURL(file);
-                const transparentBlob = await imglyRemoveBackground(imageUrl);
-                const transparentUrl = URL.createObjectURL(transparentBlob);
-                processedImg = new Image();
-                processedImg.src = transparentUrl;
-                await new Promise(resolve => processedImg.onload = resolve);
+            if (files.length > 1) {
+                // Add group header
+                const header = document.createElement('div');
+                header.className = 'image-group-header';
+                header.innerHTML = `<h3>📷 Image ${fileIdx + 1} of ${files.length} — ${file.name}</h3>`;
+                resultsDiv.appendChild(header);
             }
 
-            setStep(1, 'done');
+            resetSteps();
 
-            // ── Step 3: Split items ──
-            setStep(2, 'active');
-            showMsg('<span class="spinner"></span> Detecting and splitting items...');
+            try {
+                const itemsFound = await processSingleFile(file, fileIdx, files.length, (count) => {
+                    globalItemCount += count;
+                });
 
-            const mainCanvas = document.createElement('canvas');
-            mainCanvas.width = processedImg.width;
-            mainCanvas.height = processedImg.height;
-            const mainCtx = mainCanvas.getContext('2d');
-            mainCtx.drawImage(processedImg, 0, 0);
+                thumbs[fileIdx].classList.remove('processing');
+                thumbs[fileIdx].classList.add('done');
 
-            const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);
-            const regions = findItemRegions(mainData, processedImg.width, processedImg.height);
-
-            let itemCount = 0;
-            for (let i = 0; i < regions.length; i++) {
-                const canvas = extractItemToCanvas(mainCanvas, mainCtx, regions[i], processedImg.height);
-                if (canvas) {
-                    itemCount++;
-                    finalCanvases.push(canvas);
-                    createItemCard(canvas, itemCount);
-                }
+            } catch (error) {
+                console.error(`Error processing ${file.name}:`, error);
+                showMsg(`❌ Error processing ${file.name}. Continuing with remaining files...`, true);
+                thumbs[fileIdx].classList.remove('processing');
+                await new Promise(r => setTimeout(r, 1000));
             }
-
-            setStep(2, 'done');
-
-            if (itemCount === 0) {
-                showMsg('❌ Could not detect any items. Make sure items are distinct and visible.', true);
-            } else {
-                showMsg(`✅ Done! Extracted <strong>${itemCount}</strong> item${itemCount > 1 ? 's' : ''} as 256×256 transparent PNGs.`);
-                if (itemCount > 1) downloadAllSection.classList.add('visible');
-                resetSection.classList.add('visible');
-            }
-
-        } catch (error) {
-            console.error(error);
-            showMsg('❌ Error processing image. Check the browser console for details.', true);
-            resetSection.classList.add('visible');
         }
+
+        // Final summary
+        if (globalItemCount === 0) {
+            showMsg('❌ Could not detect any items in any of the uploaded images.', true);
+        } else {
+            showMsg(`✅ Done! Extracted <strong>${globalItemCount}</strong> item${globalItemCount > 1 ? 's' : ''} from <strong>${files.length}</strong> image${files.length > 1 ? 's' : ''} as 256×256 transparent PNGs.`);
+            if (globalItemCount > 1) downloadAllSection.classList.add('visible');
+        }
+        resetSection.classList.add('visible');
     }
+
+    // ─── Process a single file ───
+    async function processSingleFile(file, fileIdx, totalFiles, onItemsFound) {
+        const prefix = totalFiles > 1 ? `[Image ${fileIdx + 1}/${totalFiles}] ` : '';
+
+        // Step 1: Analyze transparency
+        setStep(0, 'active');
+        showMsg(`<span class="spinner"></span> ${prefix}Analyzing image for transparency...`);
+
+        const previewUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.src = previewUrl;
+        await new Promise(resolve => img.onload = resolve);
+
+        const analyzeCanvas = document.createElement('canvas');
+        analyzeCanvas.width = img.width;
+        analyzeCanvas.height = img.height;
+        const analyzeCtx = analyzeCanvas.getContext('2d');
+        analyzeCtx.drawImage(img, 0, 0);
+        const fullData = analyzeCtx.getImageData(0, 0, img.width, img.height);
+
+        const alreadyTransparent = isAlreadyTransparent(fullData);
+        setStep(0, 'done');
+
+        // Step 2: Background removal (if needed)
+        setStep(1, 'active');
+        let processedImg;
+
+        if (alreadyTransparent) {
+            showMsg(`✅ ${prefix}Image already has transparency — skipping background removal!`);
+            processedImg = img;
+            await new Promise(r => setTimeout(r, 400));
+        } else {
+            showMsg(`<span class="spinner"></span> ${prefix}Removing background with AI...<br><small style="color:var(--text-secondary)">First run downloads a ~40MB model (cached afterward)</small>`);
+            const imageUrl = URL.createObjectURL(file);
+            const transparentBlob = await imglyRemoveBackground(imageUrl);
+            const transparentUrl = URL.createObjectURL(transparentBlob);
+            processedImg = new Image();
+            processedImg.src = transparentUrl;
+            await new Promise(resolve => processedImg.onload = resolve);
+        }
+
+        setStep(1, 'done');
+
+        // Step 3: Split items
+        setStep(2, 'active');
+        showMsg(`<span class="spinner"></span> ${prefix}Detecting and splitting items...`);
+
+        const mainCanvas = document.createElement('canvas');
+        mainCanvas.width = processedImg.width;
+        mainCanvas.height = processedImg.height;
+        const mainCtx = mainCanvas.getContext('2d');
+        mainCtx.drawImage(processedImg, 0, 0);
+
+        const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);
+        const regions = findItemRegions(mainData, processedImg.width, processedImg.height);
+
+        let itemCount = 0;
+        const startIndex = finalCanvases.length;
+        for (let i = 0; i < regions.length; i++) {
+            const success = createItemCard(mainCanvas, mainCtx, regions[i], processedImg.height, startIndex + itemCount + 1);
+            if (success) itemCount++;
+        }
+
+        setStep(2, 'done');
+        onItemsFound(itemCount);
+
+        URL.revokeObjectURL(previewUrl);
+        return itemCount;
+    }
+
     })();
 </script>
 </body>
