@@ -64,8 +64,8 @@
 
     <!-- Header -->
     <div class="header">
-        <h1>✂️ AI Sprite Sheet Cutter & Game Item Extractor</h1>
-        <p>Easily extract game items from screenshots. Use this free AI tool to cut sprite sheets, isolate game assets, and remove backgrounds instantly.</p>
+        <h1>Spritecut AI</h1>
+        <p>Upload any screenshot or spritesheet. Our AI automatically removes the background and isolates every game item into perfect transparent PNGs in seconds.</p>
     </div>
 
     <!-- Settings Bar -->
@@ -103,6 +103,17 @@
                 <option value="complete">Complete (Glow)</option>
             </select>
             <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled>
+        </div>
+        <div class="setting-group">
+            <label>Export Size</label>
+            <select id="exportSizeSelect" class="styled-select">
+                <option value="exact">Crop to Exact Fit</option>
+                <option value="64">64 x 64</option>
+                <option value="128">128 x 128</option>
+                <option value="256" selected>256 x 256 (Default)</option>
+                <option value="512">512 x 512</option>
+                <option value="1024">1024 x 1024</option>
+            </select>
         </div>
         <div class="setting-group">
             <label>File Prefix</label>
@@ -166,7 +177,7 @@
 <!-- Interactive Background -->
 <canvas id="bgCanvas"></canvas>
 
-<div class="footer">SpriteCut AI · 100% client-side · No server uploads · AI cached locally</div>
+<div class="footer">SpriteCut AI · Because cropping sprites by hand in Photoshop is a form of self-torture</div>
 
 <script src="script.js"></script>
 </body>

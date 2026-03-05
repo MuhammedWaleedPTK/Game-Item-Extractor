@@ -349,10 +349,25 @@ input[type="file"] {
 /* ─── Results ─── */
 #results {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     gap: 24px;
     margin-top: 40px;
+    width: 100%;
+}
+
+.image-group {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
     flex-wrap: wrap;
+    padding: 8px 0;
+    margin-bottom: 12px;
+}
+
+.image-group>.item-card {
+    flex-shrink: 0;
 }
 
 .item-card {
@@ -360,9 +375,10 @@ input[type="file"] {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid var(--glass-border);
-    padding: 24px;
-    border-radius: var(--radius);
+    padding: 12px;
+    border-radius: 14px;
     text-align: center;
+    width: 130px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     animation: cardIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
 }
@@ -398,12 +414,15 @@ input[type="file"] {
 }
 
 .item-card h3 {
-    font-size: 0.85rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* ─── Item Background Toggles ─── */
@@ -501,8 +520,10 @@ input[type="file"] {
     display: block;
     cursor: pointer;
     background: transparent !important;
-    /* Force transparent so shadow outlines item */
     border: none;
+    width: 110px;
+    height: 110px;
+    object-fit: contain;
     transition: transform 0.2s ease, filter 0.1s ease;
 }
 
@@ -514,12 +535,12 @@ input[type="file"] {
 .canvas-container {
     position: relative;
     display: inline-block;
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid var(--border);
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     overflow: hidden;
     /* Keep background/borders clean */
-    background: repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 16px 16px;
+    background: repeating-conic-gradient(#3a3a5a 0% 25%, #2a2a48 0% 50%) 50% / 12px 12px;
 }
 
 [data-theme="light"] .canvas-container {
@@ -574,15 +595,15 @@ input[type="file"] {
 .download-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
     background: var(--accent);
     color: white;
     border: none;
-    padding: 10px 22px;
+    padding: 6px 10px;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     font-family: inherit;
     width: 100%;
     justify-content: center;

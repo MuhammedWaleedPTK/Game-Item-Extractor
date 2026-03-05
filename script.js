@@ -21,6 +21,7 @@
     const bgToggles = document.getElementById('bgToggles');
     const toast = document.getElementById('toast');
     const bgCanvas = document.getElementById('bgCanvas');
+    const exportSizeSelect = document.getElementById('exportSizeSelect');
     const shadowToggle = document.getElementById('shadowToggle');
     const shadowDirection = document.getElementById('shadowDirection');
     const shadowSlider = document.getElementById('shadowSlider');
@@ -154,6 +155,10 @@
     const savedShadowBlur = localStorage.getItem('spritecut_shadow_blur') || '10';
     const savedShadowDir = localStorage.getItem('spritecut_shadow_dir') || 'bottom';
 
+    // Apply persisted export size
+    const savedExportSize = localStorage.getItem('spritecut_export_size') || '256';
+    exportSizeSelect.value = savedExportSize;
+
     shadowToggle.checked = savedShadowEnabled;
     shadowSlider.value = savedShadowBlur;
     shadowDirection.value = savedShadowDir;
@@ -259,6 +264,13 @@
 
     // ─── Settings Auto-Update ───
     itemCountSelect.addEventListener('change', () => {
+        if (currentFiles.length > 0) {
+            processAllFiles(currentFiles);
+        }
+    });
+
+    exportSizeSelect.addEventListener('change', () => {
+        localStorage.setItem('spritecut_export_size', exportSizeSelect.value);
         if (currentFiles.length > 0) {
             processAllFiles(currentFiles);
         }
@@ -615,13 +627,23 @@
         return components;
     }
 
-    // ─── Build 256x256 canvas from a 2D bounding box ───
-    function extractItemToCanvas(srcCanvas, srcCtx, box, quality) {
-        if (!box) return null;
+    // ─── Build canvas from a 2D bounding box ───
+    function extractItemToCanvas(sourceCanvas, sourceCtx, region, quality) {
+        if (!region) return null;
+
+        const sizeSetting = document.getElementById('exportSizeSelect').value;
+        const isExact = sizeSetting === 'exact';
+        const targetSize = isExact ? 0 : parseInt(sizeSetting, 10);
 
         const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = 256;
-        finalCanvas.height = 256;
+        if (isExact) {
+            finalCanvas.width = region.width;
+            finalCanvas.height = region.height;
+        } else {
+            finalCanvas.width = targetSize;
+            finalCanvas.height = targetSize;
+        }
+
         const finalCtx = finalCanvas.getContext('2d');
 
         if (quality === 'off') {
@@ -632,27 +654,41 @@
         }
 
         const itemCanvas = document.createElement('canvas');
-        itemCanvas.width = box.width;
-        itemCanvas.height = box.height;
+        itemCanvas.width = region.width;
+        itemCanvas.height = region.height;
         const itemCtx = itemCanvas.getContext('2d');
         itemCtx.putImageData(
-            srcCtx.getImageData(box.x, box.y, box.width, box.height),
+            sourceCtx.getImageData(region.x, region.y, region.width, region.height),
             0, 0
         );
 
-        const maxFit = 240;
-        const scale = Math.min(maxFit / box.width, maxFit / box.height);
-        const newW = box.width * scale;
-        const newH = box.height * scale;
-        const dx = (256 - newW) / 2;
-        const dy = (256 - newH) / 2;
+        if (isExact) {
+            // Draw without scaling or padding
+            finalCtx.drawImage(itemCanvas, 0, 0);
+        } else {
+            // Scale and center into the target resolution (padding by about ~6%)
+            const maxFit = targetSize * 0.93;
+            const scale = Math.min(maxFit / region.width, maxFit / region.height);
+            // If the item is very small, we might not want to blur it up too much.
+            // But it's usually preferred to unify sizing. Check quality setting to determine if we allow upscale blurring.
+            let effectiveScale = quality === 'off' ? Math.ceil(scale) : scale;
+            if (quality === 'off' && effectiveScale > scale) effectiveScale = Math.floor(scale);
+            if (effectiveScale < 1 && quality === 'off') effectiveScale = 1; // Basic pixel perfect rounding fallback
+            if (quality !== 'off') effectiveScale = scale;
 
-        finalCtx.drawImage(itemCanvas, 0, 0, box.width, box.height, dx, dy, newW, newH);
+            const newW = region.width * effectiveScale;
+            const newH = region.height * effectiveScale;
+            const dx = (targetSize - newW) / 2;
+            const dy = (targetSize - newH) / 2;
+
+            finalCtx.drawImage(itemCanvas, 0, 0, region.width, region.height, dx, dy, newW, newH);
+        }
         return finalCanvas;
     }
 
-    // ─── Create result card ───
-    function createItemCard(srcCanvas, srcCtx, box, globalIndex) {
+    // ─── Create Individual Item Card ───
+    function createItemCard(sourceCanvas, sourceCtx, region, globalIndex, imageGroup) {
+        if (region.width < 10 || region.height < 10) return false;
         const card = document.createElement('div');
         card.className = 'item-card';
 
@@ -660,7 +696,7 @@
         title.innerText = `${currentPrefix}${globalIndex}`;
         card.appendChild(title);
 
-        const mainCanvas = extractItemToCanvas(srcCanvas, srcCtx, box, currentQuality);
+        const mainCanvas = extractItemToCanvas(sourceCanvas, sourceCtx, region, currentQuality);
         if (!mainCanvas) return false;
 
         // Click-to-copy wrapper
@@ -685,7 +721,12 @@
         // Apply initial visual shadow state
         if (shadowToggle.checked) {
             const blurNum = parseInt(shadowSlider.value, 10);
-            mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
+            const dir = shadowDirection.value;
+            if (dir === 'bottom') {
+                mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
+            } else {
+                mainCanvas.style.filter = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
+            }
         } else {
             mainCanvas.style.filter = 'none';
         }
@@ -706,7 +747,7 @@
         // Store canvas ref for reactive prefix updates
         card._mainCanvas = mainCanvas;
 
-        resultsDiv.appendChild(card);
+        imageGroup.appendChild(card);
         finalCanvases.push(mainCanvas);
 
         // Apply background from current active toggle to the CONTAINER, not the canvas
@@ -764,17 +805,28 @@
             thumbs.forEach(t => t.classList.remove('processing'));
             thumbs[fileIdx].classList.add('processing');
 
-            if (files.length > 1) {
+            let imageGroup = null;
+
+            if (files.length > 0) {
                 const header = document.createElement('div');
                 header.className = 'image-group-header';
-                header.innerHTML = `<h3>📷 Image ${fileIdx + 1} of ${files.length} — ${file.name}</h3>`;
+                // Only show "1 of X" if there are multiple images uploaded
+                if (files.length > 1) {
+                    header.innerHTML = `<h3>📷 Image ${fileIdx + 1} of ${files.length} — ${file.name}</h3>`;
+                } else {
+                    header.innerHTML = `<h3>📷 Extracted Items — ${file.name}</h3>`;
+                }
                 resultsDiv.appendChild(header);
+
+                imageGroup = document.createElement('div');
+                imageGroup.className = 'image-group';
+                resultsDiv.appendChild(imageGroup);
             }
 
             resetSteps();
 
             try {
-                const itemsFound = await processSingleFile(file, fileIdx, files.length, (count) => {
+                const itemsFound = await processSingleFile(file, fileIdx, files.length, imageGroup, (count) => {
                     globalItemCount += count;
                 });
 
@@ -792,14 +844,16 @@
         if (globalItemCount === 0) {
             showMsg('❌ Could not detect any items in any of the uploaded images.', true);
         } else {
-            showMsg(`✅ Done! Extracted <strong>${globalItemCount}</strong> item${globalItemCount > 1 ? 's' : ''} from <strong>${files.length}</strong> image${files.length > 1 ? 's' : ''} as 256×256 transparent PNGs.`);
+            const sizeSetting = document.getElementById('exportSizeSelect').value;
+            const sizeText = sizeSetting === 'exact' ? 'exact-fit' : `${sizeSetting}×${sizeSetting}`;
+            showMsg(`✅ Done! Extracted <strong>${globalItemCount}</strong> item${globalItemCount > 1 ? 's' : ''} from <strong>${files.length}</strong> image${files.length > 1 ? 's' : ''} as ${sizeText} transparent PNGs.`);
             if (globalItemCount > 1) downloadAllSection.classList.add('visible');
         }
         resetSection.classList.add('visible');
     }
 
     // ─── Process a single file ───
-    async function processSingleFile(file, fileIdx, totalFiles, onItemsFound) {
+    async function processSingleFile(file, fileIdx, totalFiles, imageGroup, onItemsFound) {
         const prefix = totalFiles > 1 ? `[Image ${fileIdx + 1}/${totalFiles}] ` : '';
 
         // Step 1: Analyze transparency
@@ -830,7 +884,7 @@
             processedImg = img;
             await new Promise(r => setTimeout(r, 400));
         } else {
-            showMsg(`<span class="spinner"></span> ${prefix}Removing background with AI...<br><small style="color:var(--text-secondary)">First run downloads a ~40MB model (cached afterward)</small>`);
+            showMsg(`<span class="spinner"></span> ${prefix}Removing background with AI...`);
             const imageUrl = URL.createObjectURL(file);
             const transparentBlob = await imglyRemoveBackground(imageUrl);
             const transparentUrl = URL.createObjectURL(transparentBlob);
@@ -858,7 +912,7 @@
         let itemCount = 0;
         const startIndex = finalCanvases.length;
         for (let i = 0; i < regions.length; i++) {
-            const success = createItemCard(mainCanvas, mainCtx, regions[i], startIndex + itemCount + 1);
+            const success = createItemCard(mainCanvas, mainCtx, regions[i], startIndex + itemCount + 1, imageGroup);
             if (success) itemCount++;
         }
 
