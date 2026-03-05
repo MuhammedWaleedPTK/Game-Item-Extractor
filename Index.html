@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Primary SEO -->
-    <title>SpriteCut AI — AI-Powered Sprite Splitter & BG Remover</title>
-    <meta name="description" content="Free AI-powered tool to extract game items from screenshots. SpriteCut AI automatically removes backgrounds, splits multiple items, and exports transparent PNGs. 100% browser-based.">
-    <meta name="keywords" content="SpriteCut AI, sprite splitter, game item extractor, background remover, transparent PNG, sprite sheet slicer, game development tools, AI image cropper">
+    <title>Free Sprite Sheet Cutter & Auto Item Extractor</title>
+    <meta name="description" content="Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect 256x256 transparent PNGs.">
+    <meta name="keywords" content="sprite sheet cutter, game item extractor, auto sprite slicer, remove background game assets">
     <meta name="author" content="SpriteCut AI">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://spritecut-ai.netlify.app/">
@@ -15,15 +15,15 @@
     <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://spritecut-ai.netlify.app/">
-    <meta property="og:title" content="SpriteCut AI — Professional Sprite Extraction Tool">
-    <meta property="og:description" content="AI-powered browser tool: upload a screenshot, auto-remove backgrounds, split items, and export high-quality transparent PNGs.">
+    <meta property="og:title" content="Free Sprite Sheet Cutter & Auto Item Extractor">
+    <meta property="og:description" content="Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect 256x256 transparent PNGs.">
     <meta property="og:site_name" content="SpriteCut AI">
     <meta property="og:locale" content="en_US">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="SpriteCut AI — Free Sprite Splitter & BG Remover">
-    <meta name="twitter:description" content="Extract game assets instantly. SpriteCut AI auto-splits items into transparent PNGs. 100% client-side.">
+    <meta name="twitter:title" content="Free Sprite Sheet Cutter & Auto Item Extractor">
+    <meta name="twitter:description" content="Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect transparent PNGs.">
 
     <!-- Mobile / PWA -->
     <meta name="theme-color" content="#0c0c18">
@@ -38,9 +38,9 @@
     {
         "@context": "https://schema.org",
         "@type": "WebApplication",
-        "name": "SpriteCut AI",
+        "name": "Free Sprite Sheet Cutter & Auto Item Extractor",
         "url": "https://spritecut-ai.netlify.app/",
-        "description": "Premium AI tool to extract game items from screenshots. Auto-removes backgrounds and splits sprites onto transparent canvases.",
+        "description": "Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect 256x256 transparent PNGs.",
         "applicationCategory": "DesignApplication",
         "operatingSystem": "Any (Browser-based)",
         "offers": {
@@ -64,8 +64,8 @@
 
     <!-- Header -->
     <div class="header">
-        <h1>✂️ SpriteCut AI</h1>
-        <p>AI-powered browser tool to isolate game assets and remove backgrounds instantly.</p>
+        <h1>✂️ AI Sprite Sheet Cutter & Game Item Extractor</h1>
+        <p>Easily extract game items from screenshots. Use this free AI tool to cut sprite sheets, isolate game assets, and remove backgrounds instantly.</p>
     </div>
 
     <!-- Settings Bar -->
@@ -89,6 +89,20 @@
                 <button data-quality="medium">Smooth</button>
                 <button data-quality="high">Ultra</button>
             </div>
+        </div>
+        <div class="setting-group shadow-group">
+            <div class="shadow-header">
+                <label>Drop Shadow</label>
+                <label class="switch">
+                    <input type="checkbox" id="shadowToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <select id="shadowDirection" class="styled-select shadow-dir-select" disabled>
+                <option value="bottom" selected>Drop Shadow</option>
+                <option value="complete">Complete (Glow)</option>
+            </select>
+            <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled>
         </div>
         <div class="setting-group">
             <label>File Prefix</label>

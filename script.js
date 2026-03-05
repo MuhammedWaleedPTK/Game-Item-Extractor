@@ -1,28 +1,31 @@
-(async function() {
+(async function () {
     const { removeBackground: imglyRemoveBackground } = await import("https://esm.sh/@imgly/background-removal@1.7.0");
     const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
 
     // ─── DOM refs ───
-    const imageUpload     = document.getElementById('imageUpload');
-    const uploadZone      = document.getElementById('uploadZone');
-    const previewSection  = document.getElementById('previewSection');
-    const previewStrip    = document.getElementById('previewStrip');
+    const imageUpload = document.getElementById('imageUpload');
+    const uploadZone = document.getElementById('uploadZone');
+    const previewSection = document.getElementById('previewSection');
+    const previewStrip = document.getElementById('previewStrip');
     const progressSection = document.getElementById('progressSection');
-    const progressMsg     = document.getElementById('progressMsg');
-    const resultsDiv      = document.getElementById('results');
+    const progressMsg = document.getElementById('progressMsg');
+    const resultsDiv = document.getElementById('results');
     const downloadAllSection = document.getElementById('downloadAllSection');
-    const downloadAllBtn  = document.getElementById('downloadAllBtn');
-    const resetSection    = document.getElementById('resetSection');
-    const resetBtn        = document.getElementById('resetBtn');
-    const qualityToggle   = document.getElementById('qualityToggle');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    const resetSection = document.getElementById('resetSection');
+    const resetBtn = document.getElementById('resetBtn');
+    const qualityToggle = document.getElementById('qualityToggle');
     const itemCountSelect = document.getElementById('itemCountSelect');
-    const themeToggle     = document.getElementById('themeToggle');
-    const prefixInput     = document.getElementById('prefixInput');
-    const bgToggles       = document.getElementById('bgToggles');
-    const toast           = document.getElementById('toast');
-    const bgCanvas        = document.getElementById('bgCanvas');
-    const steps           = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
-    const connectors      = [document.getElementById('conn1'), document.getElementById('conn2')];
+    const themeToggle = document.getElementById('themeToggle');
+    const prefixInput = document.getElementById('prefixInput');
+    const bgToggles = document.getElementById('bgToggles');
+    const toast = document.getElementById('toast');
+    const bgCanvas = document.getElementById('bgCanvas');
+    const shadowToggle = document.getElementById('shadowToggle');
+    const shadowDirection = document.getElementById('shadowDirection');
+    const shadowSlider = document.getElementById('shadowSlider');
+    const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+    const connectors = [document.getElementById('conn1'), document.getElementById('conn2')];
 
     // ─── Interactive Background ───
     const bgCtx = bgCanvas.getContext('2d');
@@ -92,7 +95,7 @@
 
                 if (distance < 120) {
                     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-                    bgCtx.strokeStyle = isLight ? `rgba(108, 92, 231, ${1 - distance/120})` : `rgba(162, 155, 254, ${1 - distance/120})`;
+                    bgCtx.strokeStyle = isLight ? `rgba(108, 92, 231, ${1 - distance / 120})` : `rgba(162, 155, 254, ${1 - distance / 120})`;
                     bgCtx.lineWidth = 0.5;
                     bgCtx.beginPath();
                     bgCtx.moveTo(particles[i].x, particles[i].y);
@@ -117,8 +120,8 @@
     // ─── Settings State & Persistence ───
     let finalCanvases = [];
     let currentQuality = localStorage.getItem('spritecut_quality') || 'off';
-    let currentPrefix  = localStorage.getItem('spritecut_prefix') || 'item_';
-    let currentFiles   = [];
+    let currentPrefix = localStorage.getItem('spritecut_prefix') || 'item_';
+    let currentFiles = [];
 
     // Apply persisted prefix
     prefixInput.value = currentPrefix;
@@ -145,6 +148,18 @@
             }
         });
     });
+
+    // Apply persisted shadow settings
+    const savedShadowEnabled = localStorage.getItem('spritecut_shadow_enabled') === 'true';
+    const savedShadowBlur = localStorage.getItem('spritecut_shadow_blur') || '10';
+    const savedShadowDir = localStorage.getItem('spritecut_shadow_dir') || 'bottom';
+
+    shadowToggle.checked = savedShadowEnabled;
+    shadowSlider.value = savedShadowBlur;
+    shadowDirection.value = savedShadowDir;
+
+    shadowSlider.disabled = !savedShadowEnabled;
+    shadowDirection.disabled = !savedShadowEnabled;
 
     // Apply persisted quality
     qualityToggle.querySelectorAll('button').forEach(b => {
@@ -180,10 +195,10 @@
     bgToggles.addEventListener('click', (e) => {
         const swatch = e.target.closest('.bg-swatch');
         if (!swatch) return;
-        
+
         bgToggles.querySelectorAll('.bg-swatch').forEach(s => s.classList.remove('active'));
         swatch.classList.add('active');
-        
+
         const type = swatch.dataset.bg;
         const colorMap = {
             checkered: '',
@@ -192,14 +207,54 @@
             green: '#00ff00'
         };
 
-        const canvases = resultsDiv.querySelectorAll('canvas');
-        canvases.forEach(canvas => {
+        const canvasContainers = resultsDiv.querySelectorAll('.canvas-container');
+        canvasContainers.forEach(container => {
             if (type === 'checkered') {
-                canvas.style.background = '';
+                container.style.background = '';
             } else {
-                canvas.style.background = colorMap[type];
+                container.style.background = colorMap[type];
             }
         });
+    });
+
+    // ─── Shadow Toggles & Slider ───
+    function updateShadowVisuals() {
+        const isEnabled = shadowToggle.checked;
+        const blurNum = parseInt(shadowSlider.value, 10);
+        const dir = shadowDirection.value;
+
+        let filterString = 'none';
+        if (isEnabled) {
+            if (dir === 'bottom') {
+                filterString = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
+            } else {
+                // Complete shadow (glow)
+                filterString = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
+            }
+        }
+
+        // Update all canvases on screen instantly
+        finalCanvases.forEach(canvas => {
+            canvas.style.filter = filterString;
+        });
+    }
+
+    shadowToggle.addEventListener('change', () => {
+        const isEnabled = shadowToggle.checked;
+        shadowSlider.disabled = !isEnabled;
+        shadowDirection.disabled = !isEnabled;
+        localStorage.setItem('spritecut_shadow_enabled', isEnabled);
+        updateShadowVisuals();
+    });
+
+    shadowDirection.addEventListener('change', () => {
+        localStorage.setItem('spritecut_shadow_dir', shadowDirection.value);
+        updateShadowVisuals();
+    });
+
+    shadowSlider.addEventListener('input', () => {
+        localStorage.setItem('spritecut_shadow_blur', shadowSlider.value);
+        updateShadowVisuals();
     });
 
     // ─── Settings Auto-Update ───
@@ -275,6 +330,38 @@
         itemCountSelect.value = 'auto';
     });
 
+    // ─── Bake Shadow function for Downloads ───
+    function bakeShadowToCanvas(sourceCanvas) {
+        const isEnabled = shadowToggle.checked;
+        if (!isEnabled) return sourceCanvas; // Return original if no shadow
+
+        const blurNum = parseInt(shadowSlider.value, 10);
+        const dir = shadowDirection.value;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = sourceCanvas.width;
+        tempCanvas.height = sourceCanvas.height;
+        const ctx = tempCanvas.getContext('2d');
+
+        // Setup shadow
+        if (dir === 'bottom') {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+            ctx.shadowBlur = blurNum;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = blurNum / 2;
+        } else {
+            // Complete glowing shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+            ctx.shadowBlur = blurNum * 1.5;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+        }
+
+        // Draw image over shadow
+        ctx.drawImage(sourceCanvas, 0, 0);
+        return tempCanvas;
+    }
+
     downloadAllBtn.addEventListener('click', async () => {
         const originalText = downloadAllBtn.innerHTML;
         downloadAllBtn.disabled = true;
@@ -283,7 +370,8 @@
         try {
             const zip = new JSZip();
             for (let i = 0; i < finalCanvases.length; i++) {
-                const dataUrl = finalCanvases[i].toDataURL('image/png');
+                const bakedCanvas = bakeShadowToCanvas(finalCanvases[i]);
+                const dataUrl = bakedCanvas.toDataURL('image/png');
                 const base64 = dataUrl.split(',')[1];
                 zip.file(`${currentPrefix}${i + 1}.png`, base64, { base64: true });
             }
@@ -329,7 +417,8 @@
 
     async function copyToClipboard(canvas) {
         try {
-            const blob = await new Promise(resolve => canvas.toBlob(resolve));
+            const bakedCanvas = bakeShadowToCanvas(canvas);
+            const blob = await new Promise(resolve => bakedCanvas.toBlob(resolve));
             const item = new ClipboardItem({ [blob.type]: blob });
             await navigator.clipboard.write([item]);
             showToast("✨ Item copied to clipboard!");
@@ -389,7 +478,7 @@
                 if (!visited[idx] && isOpaque(idx)) {
                     let minX = width, minY = height, maxX = 0, maxY = 0;
                     let pixelCount = 0;
-                    
+
                     const stack = [idx];
                     visited[idx] = 1;
 
@@ -450,50 +539,50 @@
         if (targetCountStr === 'auto') return components;
 
         const targetCount = parseInt(targetCountStr, 10);
-        
+
         if (components.length === targetCount) return components;
 
         // Merge closest components if too many
         while (components.length > targetCount) {
-             let minDist = Infinity;
-             let mergeI = -1;
-             let mergeJ = -1;
+            let minDist = Infinity;
+            let mergeI = -1;
+            let mergeJ = -1;
 
-             for(let i=0; i<components.length; i++) {
-                 for(let j=i+1; j<components.length; j++) {
-                     const c1 = components[i];
-                     const c2 = components[j];
-                     
-                     const cx1 = c1.x + c1.width/2;
-                     const cy1 = c1.y + c1.height/2;
-                     const cx2 = c2.x + c2.width/2;
-                     const cy2 = c2.y + c2.height/2;
-                     const dist = Math.sqrt((cx1-cx2)**2 + (cy1-cy2)**2);
+            for (let i = 0; i < components.length; i++) {
+                for (let j = i + 1; j < components.length; j++) {
+                    const c1 = components[i];
+                    const c2 = components[j];
 
-                     if(dist < minDist) {
-                         minDist = dist;
-                         mergeI = i;
-                         mergeJ = j;
-                     }
-                 }
-             }
+                    const cx1 = c1.x + c1.width / 2;
+                    const cy1 = c1.y + c1.height / 2;
+                    const cx2 = c2.x + c2.width / 2;
+                    const cy2 = c2.y + c2.height / 2;
+                    const dist = Math.sqrt((cx1 - cx2) ** 2 + (cy1 - cy2) ** 2);
 
-             const c1 = components[mergeI];
-             const c2 = components[mergeJ];
-             const nx = Math.min(c1.x, c2.x);
-             const ny = Math.min(c1.y, c2.y);
-             const nMaxX = Math.max(c1.x + c1.width, c2.x + c2.width);
-             const nMaxY = Math.max(c1.y + c1.height, c2.y + c2.height);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        mergeI = i;
+                        mergeJ = j;
+                    }
+                }
+            }
 
-             components[mergeI] = {
-                 x: nx,
-                 y: ny,
-                 width: nMaxX - nx,
-                 height: nMaxY - ny,
-                 pixelCount: c1.pixelCount + c2.pixelCount
-             };
+            const c1 = components[mergeI];
+            const c2 = components[mergeJ];
+            const nx = Math.min(c1.x, c2.x);
+            const ny = Math.min(c1.y, c2.y);
+            const nMaxX = Math.max(c1.x + c1.width, c2.x + c2.width);
+            const nMaxY = Math.max(c1.y + c1.height, c2.y + c2.height);
 
-             components.splice(mergeJ, 1);
+            components[mergeI] = {
+                x: nx,
+                y: ny,
+                width: nMaxX - nx,
+                height: nMaxY - ny,
+                pixelCount: c1.pixelCount + c2.pixelCount
+            };
+
+            components.splice(mergeJ, 1);
         }
 
         // Split largest component if too few
@@ -509,8 +598,8 @@
             }
 
             const toSplit = components[largestIdx];
-            
-            if(toSplit.width > toSplit.height) {
+
+            if (toSplit.width > toSplit.height) {
                 const half1Width = Math.floor(toSplit.width / 2);
                 const r1 = { x: toSplit.x, y: toSplit.y, width: half1Width, height: toSplit.height };
                 const r2 = { x: toSplit.x + half1Width, y: toSplit.y, width: toSplit.width - half1Width, height: toSplit.height };
@@ -580,10 +669,10 @@
         const copyOverlay = document.createElement('div');
         copyOverlay.className = 'copy-overlay';
         copyOverlay.innerText = '📋 Click to Copy';
-        
+
         canvasContainer.appendChild(copyOverlay);
         canvasContainer.appendChild(mainCanvas);
-        
+
         canvasContainer.addEventListener('click', () => {
             copyToClipboard(mainCanvas);
         });
@@ -593,14 +682,23 @@
         // Animation delay for staggering
         card.style.animationDelay = `${(globalIndex % 6) * 0.1}s`;
 
+        // Apply initial visual shadow state
+        if (shadowToggle.checked) {
+            const blurNum = parseInt(shadowSlider.value, 10);
+            mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
+        } else {
+            mainCanvas.style.filter = 'none';
+        }
+
         // Download button
         const downloadBtn = document.createElement('button');
         downloadBtn.className = 'download-btn';
         downloadBtn.innerHTML = '📥 Download PNG';
         downloadBtn.onclick = () => {
+            const bakedCanvas = bakeShadowToCanvas(mainCanvas);
             const link = document.createElement('a');
             link.download = `${currentPrefix}${globalIndex}.png`;
-            link.href = mainCanvas.toDataURL('image/png');
+            link.href = bakedCanvas.toDataURL('image/png');
             link.click();
         };
         card.appendChild(downloadBtn);
@@ -611,11 +709,24 @@
         resultsDiv.appendChild(card);
         finalCanvases.push(mainCanvas);
 
-        // Apply background from current active toggle
+        // Apply background from current active toggle to the CONTAINER, not the canvas
         const activeSwatch = bgToggles.querySelector('.bg-swatch.active');
         if (activeSwatch && activeSwatch.dataset.bg !== 'checkered') {
             const colorMap = { black: '#000', white: '#fff', green: '#00ff00' };
-            mainCanvas.style.background = colorMap[activeSwatch.dataset.bg];
+            canvasContainer.style.background = colorMap[activeSwatch.dataset.bg];
+        }
+
+        // Apply initial visual shadow state to the completely transparent canvas
+        if (shadowToggle.checked) {
+            const blurNum = parseInt(shadowSlider.value, 10);
+            const dir = shadowDirection.value;
+            if (dir === 'bottom') {
+                mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
+            } else {
+                mainCanvas.style.filter = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
+            }
+        } else {
+            mainCanvas.style.filter = 'none';
         }
 
         return true;
