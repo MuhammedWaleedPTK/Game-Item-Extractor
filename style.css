@@ -770,10 +770,51 @@ input[type="file"] {
 .settings-bar.stuck {
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
     border-color: var(--accent);
-    padding: 10px 24px;
+    padding: 10px 24px 10px 16px;
     border-radius: 30px;
     flex-wrap: nowrap;
     gap: 15px;
+}
+
+.settings-bar.stuck.expanded {
+    flex-wrap: wrap;
+    border-radius: var(--radius);
+    padding: 16px 28px;
+}
+
+.settings-toggle-btn {
+    display: none;
+    /* Only visible when stuck */
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    margin-right: -4px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.settings-toggle-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.settings-toggle-btn:hover {
+    color: var(--accent);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.settings-bar.stuck .settings-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-bar.stuck.expanded .settings-toggle-btn svg {
+    transform: rotate(180deg);
 }
 
 .setting-group {
@@ -786,7 +827,8 @@ input[type="file"] {
     overflow: hidden;
 }
 
-.settings-bar.stuck .setting-group:not(.essential) {
+.settings-bar.stuck:not(.expanded) .setting-group:not(.essential),
+.settings-bar.stuck:not(.expanded) .bg-toggles:not(.essential) {
     max-width: 0;
     opacity: 0;
     margin: 0;
@@ -1140,9 +1182,48 @@ input:checked+.slider:before {
 }
 
 /* ─── Responsive ─── */
+/* ─── Responsive ─── */
 @media (max-width: 640px) {
+    body {
+        padding: 10px;
+    }
+
+    .main-container {
+        padding: 16px;
+    }
+
+    .header {
+        margin-bottom: 20px;
+    }
+
     .header h1 {
-        font-size: 1.8rem;
+        font-size: 1.4rem;
+        margin-bottom: 4px;
+    }
+
+    .header p {
+        display: none;
+        /* Hide description on mobile to save space */
+    }
+
+    .upload-zone {
+        padding: 20px;
+        min-height: 120px;
+        /* Drastically shrink height */
+    }
+
+    .upload-zone .icon {
+        font-size: 2rem;
+        margin-bottom: 8px;
+    }
+
+    .upload-zone h2 {
+        font-size: 1rem;
+        margin-bottom: 4px;
+    }
+
+    .upload-zone p {
+        font-size: 0.75rem;
     }
 
     .steps {
@@ -1152,6 +1233,16 @@ input:checked+.slider:before {
     .settings-bar {
         flex-direction: column;
         gap: 12px;
+        padding: 12px;
+    }
+
+    .settings-bar.stuck {
+        flex-direction: row;
+        /* Keep row for sticky */
+        overflow-x: auto;
+        /* Allow scrolling essential options */
+        padding: 8px 16px;
+        border-radius: 16px;
     }
 
     .step-connector {
@@ -1162,6 +1253,27 @@ input:checked+.slider:before {
     #results {
         flex-direction: column;
         align-items: center;
+        margin-top: 20px;
+    }
+
+    .image-group {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .source-container {
+        flex-direction: row;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .arrow-divider {
+        transform: rotate(90deg);
+        margin: 8px 0;
+    }
+
+    .extracted-items {
+        justify-content: center;
     }
 
     .item-card {

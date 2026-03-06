@@ -151,11 +151,22 @@
                     settingsBar.classList.add('stuck');
                 } else {
                     settingsBar.classList.remove('stuck');
+                    settingsBar.classList.remove('expanded'); // Auto-collapse when un-sticking
                 }
             },
             { threshold: [1], rootMargin: "-21px 0px 0px 0px" }
         );
         observer.observe(settingsAnchor);
+    }
+
+    // Toggle settings expansion when stuck
+    const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+    if (settingsToggleBtn) {
+        settingsToggleBtn.addEventListener('click', () => {
+            if (settingsBar.classList.contains('stuck')) {
+                settingsBar.classList.toggle('expanded');
+            }
+        });
     }
 
     // Apply persisted shadow settings

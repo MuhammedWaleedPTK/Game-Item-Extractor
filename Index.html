@@ -19,16 +19,19 @@
     <meta property="og:description" content="Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect 256x256 transparent PNGs.">
     <meta property="og:site_name" content="SpriteCut AI">
     <meta property="og:locale" content="en_US">
+    <meta property="og:image" content="https://spritecut-ai.netlify.app/favicon.png">
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Free Sprite Sheet Cutter & Auto Item Extractor">
     <meta name="twitter:description" content="Easily extract game items from screenshots. Use this free, in-browser AI sprite sheet cutter to remove backgrounds and resize items to perfect transparent PNGs.">
+    <meta name="twitter:image" content="https://spritecut-ai.netlify.app/favicon.png">
 
     <!-- Mobile / PWA -->
     <meta name="theme-color" content="#0c0c18">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="SpriteCut AI">
+    <link rel="apple-touch-icon" href="favicon.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
@@ -73,6 +76,13 @@
 
     <!-- Settings Bar -->
     <div class="settings-bar" id="settingsBar">
+        <!-- Expand/Collapse Toggle Button -->
+        <button class="settings-toggle-btn" id="settingsToggleBtn" style="display: none;" title="Toggle Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </button>
+
         <div class="setting-group">
             <label>Items to Extract</label>
             <select id="itemCountSelect" class="styled-select">
@@ -85,7 +95,7 @@
                 <option value="6">6 Items</option>
             </select>
         </div>
-        <div class="setting-group essential">
+        <div class="setting-group">
             <label>Quality</label>
             <div class="quality-toggle" id="qualityToggle">
                 <button data-quality="off" class="active">Pixel</button>
@@ -125,13 +135,13 @@
                 <option value="1024">1024 x 1024</option>
             </select>
         </div>
-        <div class="setting-group essential">
+        <div class="setting-group">
             <label>File Prefix</label>
             <input type="text" id="prefixInput" class="styled-input" value="item_" placeholder="e.g. Sprite_" />
         </div>
 
         <!-- Background Toggles (Inside settings bar) -->
-        <div class="bg-toggles essential" id="bgToggles" style="display: none;">
+        <div class="bg-toggles" id="bgToggles" style="display: none;">
             <span class="bg-toggles-label" style="display: none;">Preview BG</span>
             <div class="bg-swatch swatch-checkered active" data-bg="checkered" title="Transparent Checkered"></div>
             <div class="bg-swatch swatch-black" data-bg="black" title="Solid Black"></div>
