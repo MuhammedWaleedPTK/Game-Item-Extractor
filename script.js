@@ -25,6 +25,7 @@
     const shadowToggle = document.getElementById('shadowToggle');
     const shadowDirection = document.getElementById('shadowDirection');
     const shadowSlider = document.getElementById('shadowSlider');
+    const paddingSlider = document.getElementById('paddingSlider');
     const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors = [document.getElementById('conn1'), document.getElementById('conn2')];
 
@@ -134,21 +135,28 @@
         const cards = resultsDiv.querySelectorAll('.item-card');
         cards.forEach((card, i) => {
             const idx = i + 1;
-            const title = card.querySelector('h3');
-            if (title) title.innerText = `${currentPrefix}${idx}`;
-
-            // Update the download button's filename
-            const dlBtn = card.querySelector('.download-btn');
-            if (dlBtn && card._mainCanvas) {
-                dlBtn.onclick = () => {
-                    const link = document.createElement('a');
-                    link.download = `${currentPrefix}${idx}.png`;
-                    link.href = card._mainCanvas.toDataURL('image/png');
-                    link.click();
-                };
-            }
+            const titleInput = card.querySelector('.item-title-input');
+            if (titleInput) titleInput.value = `${currentPrefix}${idx}`;
         });
     });
+
+    // ─── Sticky Settings Bar Observer ───
+    const settingsAnchor = document.getElementById('settingsAnchor');
+    const settingsBar = document.getElementById('settingsBar');
+
+    if (settingsAnchor && settingsBar) {
+        const observer = new IntersectionObserver(
+            ([e]) => {
+                if (e.boundingClientRect.top < 21) {
+                    settingsBar.classList.add('stuck');
+                } else {
+                    settingsBar.classList.remove('stuck');
+                }
+            },
+            { threshold: [1], rootMargin: "-21px 0px 0px 0px" }
+        );
+        observer.observe(settingsAnchor);
+    }
 
     // Apply persisted shadow settings
     const savedShadowEnabled = localStorage.getItem('spritecut_shadow_enabled') === 'true';
@@ -158,6 +166,43 @@
     // Apply persisted export size
     const savedExportSize = localStorage.getItem('spritecut_export_size') || '256';
     exportSizeSelect.value = savedExportSize;
+
+    // Apply persisted padding
+    const savedPadding = localStorage.getItem('spritecut_padding') || '10';
+    if (paddingSlider) {
+        paddingSlider.value = savedPadding;
+        const paddingValue = document.getElementById('paddingValue');
+        if (paddingValue) paddingValue.innerText = savedPadding + '%';
+        paddingSlider.addEventListener('input', () => {
+            if (paddingValue) paddingValue.innerText = paddingSlider.value + '%';
+            localStorage.setItem('spritecut_padding', paddingSlider.value);
+
+            // Redraw existing canvases dynamically without full file re-processing
+            const cards = resultsDiv.querySelectorAll('.item-card');
+            cards.forEach(card => {
+                if (card._sourceCanvas && card._sourceCtx && card._region) {
+                    const newCanvas = extractItemToCanvas(card._sourceCanvas, card._sourceCtx, card._region, currentQuality);
+                    if (newCanvas && card._mainCanvas) {
+                        // Apply filters to new canvas
+                        newCanvas.style.filter = card._mainCanvas.style.filter;
+
+                        // Replace in DOM
+                        card._mainCanvas.parentNode.replaceChild(newCanvas, card._mainCanvas);
+
+                        // Update references
+                        const idx = finalCanvases.indexOf(card._mainCanvas);
+                        if (idx > -1) finalCanvases[idx] = newCanvas;
+                        card._mainCanvas = newCanvas;
+
+                        // Re-bind click to copy
+                        newCanvas.parentNode.addEventListener('click', () => {
+                            copyToClipboard(newCanvas);
+                        });
+                    }
+                }
+            });
+        });
+    }
 
     shadowToggle.checked = savedShadowEnabled;
     shadowSlider.value = savedShadowBlur;
@@ -288,6 +333,47 @@
         uploadZone.classList.remove('drag-over');
     });
 
+    // ─── Dynamic Mouse-Tracking Glow ───
+    let glowTargetX = 0, glowTargetY = 0;
+    let glowCurrentX = 0, glowCurrentY = 0;
+    let isGlowAnimating = false;
+
+    function animateGlow() {
+        // Lerp factor (lower is smoother/more delayed, e.g., 0.08)
+        const lerpFactor = 0.08;
+        glowCurrentX += (glowTargetX - glowCurrentX) * lerpFactor;
+        glowCurrentY += (glowTargetY - glowCurrentY) * lerpFactor;
+
+        uploadZone.style.setProperty('--x', `${glowCurrentX}px`);
+        uploadZone.style.setProperty('--y', `${glowCurrentY}px`);
+
+        if (Math.abs(glowTargetX - glowCurrentX) > 0.5 || Math.abs(glowTargetY - glowCurrentY) > 0.5) {
+            requestAnimationFrame(animateGlow);
+        } else {
+            isGlowAnimating = false;
+        }
+    }
+
+    uploadZone.addEventListener('mouseenter', (e) => {
+        const rect = uploadZone.getBoundingClientRect();
+        // Snap to initial position on enter so it doesn't fly in from 0,0
+        glowCurrentX = glowTargetX = e.clientX - rect.left;
+        glowCurrentY = glowTargetY = e.clientY - rect.top;
+        uploadZone.style.setProperty('--x', `${glowCurrentX}px`);
+        uploadZone.style.setProperty('--y', `${glowCurrentY}px`);
+    });
+
+    uploadZone.addEventListener('mousemove', (e) => {
+        const rect = uploadZone.getBoundingClientRect();
+        glowTargetX = e.clientX - rect.left;
+        glowTargetY = e.clientY - rect.top;
+
+        if (!isGlowAnimating) {
+            isGlowAnimating = true;
+            requestAnimationFrame(animateGlow);
+        }
+    });
+
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadZone.classList.remove('drag-over');
@@ -381,11 +467,16 @@
 
         try {
             const zip = new JSZip();
-            for (let i = 0; i < finalCanvases.length; i++) {
-                const bakedCanvas = bakeShadowToCanvas(finalCanvases[i]);
+            const cards = Array.from(resultsDiv.querySelectorAll('.item-card'));
+            for (let i = 0; i < cards.length; i++) {
+                const card = cards[i];
+                if (!card._mainCanvas) continue;
+                const titleInput = card.querySelector('.item-title-input');
+                const filename = titleInput ? titleInput.value : `${currentPrefix}${i + 1}`;
+                const bakedCanvas = bakeShadowToCanvas(card._mainCanvas);
                 const dataUrl = bakedCanvas.toDataURL('image/png');
                 const base64 = dataUrl.split(',')[1];
-                zip.file(`${currentPrefix}${i + 1}.png`, base64, { base64: true });
+                zip.file(`${filename}.png`, base64, { base64: true });
             }
             const blob = await zip.generateAsync({ type: 'blob' });
             const link = document.createElement('a');
@@ -666,8 +757,11 @@
             // Draw without scaling or padding
             finalCtx.drawImage(itemCanvas, 0, 0);
         } else {
-            // Scale and center into the target resolution (padding by about ~6%)
-            const maxFit = targetSize * 0.93;
+            // Scale and center into the target resolution based on padding slider
+            const paddingSlider = document.getElementById('paddingSlider');
+            const paddingPct = paddingSlider ? parseInt(paddingSlider.value, 10) : 10;
+            const scaleFactor = 1 - ((paddingPct * 2) / 100);
+            const maxFit = targetSize * (scaleFactor > 0 ? scaleFactor : 0.1);
             const scale = Math.min(maxFit / region.width, maxFit / region.height);
             // If the item is very small, we might not want to blur it up too much.
             // But it's usually preferred to unify sizing. Check quality setting to determine if we allow upscale blurring.
@@ -692,9 +786,24 @@
         const card = document.createElement('div');
         card.className = 'item-card';
 
-        const title = document.createElement('h3');
-        title.innerText = `${currentPrefix}${globalIndex}`;
-        card.appendChild(title);
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-item-btn';
+        deleteBtn.innerHTML = '×';
+        deleteBtn.title = 'Remove from export';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            const index = finalCanvases.indexOf(card._mainCanvas);
+            if (index > -1) finalCanvases.splice(index, 1);
+            card.remove();
+        };
+        card.appendChild(deleteBtn);
+
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'item-title-input';
+        titleInput.value = `${currentPrefix}${globalIndex}`;
+        titleInput.onclick = (e) => e.stopPropagation();
+        card.appendChild(titleInput);
 
         const mainCanvas = extractItemToCanvas(sourceCanvas, sourceCtx, region, currentQuality);
         if (!mainCanvas) return false;
@@ -738,13 +847,18 @@
         downloadBtn.onclick = () => {
             const bakedCanvas = bakeShadowToCanvas(mainCanvas);
             const link = document.createElement('a');
-            link.download = `${currentPrefix}${globalIndex}.png`;
+            link.download = `${titleInput.value}.png`;
             link.href = bakedCanvas.toDataURL('image/png');
             link.click();
         };
         card.appendChild(downloadBtn);
 
-        // Store canvas ref for reactive prefix updates
+        // Store internal data for dynamic redrawing
+        card._sourceCanvas = sourceCanvas;
+        card._sourceCtx = sourceCtx;
+        card._region = region;
+
+        // Store canvas ref for reactive updates
         card._mainCanvas = mainCanvas;
 
         imageGroup.appendChild(card);
@@ -812,21 +926,48 @@
                 header.className = 'image-group-header';
                 // Only show "1 of X" if there are multiple images uploaded
                 if (files.length > 1) {
-                    header.innerHTML = `<h3>📷 Image ${fileIdx + 1} of ${files.length} — ${file.name}</h3>`;
+                    header.innerHTML = `<h3>📷 Image ${fileIdx + 1} of ${files.length}</h3>`;
                 } else {
-                    header.innerHTML = `<h3>📷 Extracted Items — ${file.name}</h3>`;
+                    header.innerHTML = `<h3>📷 Extracted Items</h3>`;
                 }
                 resultsDiv.appendChild(header);
 
                 imageGroup = document.createElement('div');
                 imageGroup.className = 'image-group';
+
+                // Add the source image container
+                const sourceContainer = document.createElement('div');
+                sourceContainer.className = 'source-container';
+                const sourceImg = document.createElement('img');
+                sourceImg.src = URL.createObjectURL(file);
+                sourceImg.className = 'source-thumb';
+                const sourceLabel = document.createElement('div');
+                sourceLabel.className = 'source-label';
+                sourceLabel.innerText = 'Original';
+                sourceContainer.appendChild(sourceImg);
+                sourceContainer.appendChild(sourceLabel);
+
+                const arrow = document.createElement('div');
+                arrow.className = 'arrow-divider';
+                arrow.innerText = '➔';
+
+                const itemsContainer = document.createElement('div');
+                itemsContainer.className = 'extracted-items';
+
+                imageGroup.appendChild(sourceContainer);
+                imageGroup.appendChild(arrow);
+                imageGroup.appendChild(itemsContainer);
+
+                // Pass the itemsContainer to processSingleFile instead of the root group
                 resultsDiv.appendChild(imageGroup);
             }
 
             resetSteps();
 
             try {
-                const itemsFound = await processSingleFile(file, fileIdx, files.length, imageGroup, (count) => {
+                // We pass itemsContainer to be populated by createItemCard
+                const itemsContainer = imageGroup ? imageGroup.querySelector('.extracted-items') : null;
+                const itemsFound = await processSingleFile(file, fileIdx, files.length, itemsContainer, (count) => {
                     globalItemCount += count;
                 });
 
@@ -848,6 +989,19 @@
             const sizeText = sizeSetting === 'exact' ? 'exact-fit' : `${sizeSetting}×${sizeSetting}`;
             showMsg(`✅ Done! Extracted <strong>${globalItemCount}</strong> item${globalItemCount > 1 ? 's' : ''} from <strong>${files.length}</strong> image${files.length > 1 ? 's' : ''} as ${sizeText} transparent PNGs.`);
             if (globalItemCount > 1) downloadAllSection.classList.add('visible');
+
+            // Hide progress and preview sections to bring results to the top
+            previewSection.classList.remove('visible');
+            progressSection.classList.remove('visible');
+
+            // Auto-scroll to the first result row
+            setTimeout(() => {
+                const firstResult = resultsDiv.querySelector('.image-group');
+                if (firstResult) {
+                    const y = firstResult.getBoundingClientRect().top + window.scrollY - 100; // Account for sticky settings bar
+                    window.scrollTo({ top: y, behavior: 'smooth' });
+                }
+            }, 100);
         }
         resetSection.classList.add('visible');
     }

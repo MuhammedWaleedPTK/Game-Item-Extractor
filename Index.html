@@ -68,6 +68,9 @@
         <p>Upload any screenshot or spritesheet. Our AI automatically removes the background and isolates every game item into perfect transparent PNGs in seconds.</p>
     </div>
 
+    <!-- Sticky Sentinel -->
+    <div id="settingsAnchor" style="position: relative; top: -20px; height: 1px; pointer-events: none;"></div>
+
     <!-- Settings Bar -->
     <div class="settings-bar" id="settingsBar">
         <div class="setting-group">
@@ -82,7 +85,7 @@
                 <option value="6">6 Items</option>
             </select>
         </div>
-        <div class="setting-group">
+        <div class="setting-group essential">
             <label>Quality</label>
             <div class="quality-toggle" id="qualityToggle">
                 <button data-quality="off" class="active">Pixel</button>
@@ -90,7 +93,7 @@
                 <button data-quality="high">Ultra</button>
             </div>
         </div>
-        <div class="setting-group shadow-group">
+        <div class="setting-group shadow-group essential">
             <div class="shadow-header">
                 <label>Drop Shadow</label>
                 <label class="switch">
@@ -104,6 +107,13 @@
             </select>
             <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled>
         </div>
+        <div class="setting-group shadow-group essential">
+            <div class="shadow-header">
+                <label>Padding</label>
+                <span id="paddingValue" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">10%</span>
+            </div>
+            <input type="range" id="paddingSlider" min="0" max="50" value="10" class="styled-slider">
+        </div>
         <div class="setting-group">
             <label>Export Size</label>
             <select id="exportSizeSelect" class="styled-select">
@@ -115,19 +125,19 @@
                 <option value="1024">1024 x 1024</option>
             </select>
         </div>
-        <div class="setting-group">
+        <div class="setting-group essential">
             <label>File Prefix</label>
             <input type="text" id="prefixInput" class="styled-input" value="item_" placeholder="e.g. Sprite_" />
         </div>
-    </div>
 
-    <!-- Background Toggles -->
-    <div class="bg-toggles" id="bgToggles" style="display: none;">
-        <span class="bg-toggles-label">Preview BG</span>
-        <div class="bg-swatch swatch-checkered active" data-bg="checkered" title="Transparent Checkered"></div>
-        <div class="bg-swatch swatch-black" data-bg="black" title="Solid Black"></div>
-        <div class="bg-swatch swatch-white" data-bg="white" title="Solid White"></div>
-        <div class="bg-swatch swatch-green" data-bg="green" title="Green Screen"></div>
+        <!-- Background Toggles (Inside settings bar) -->
+        <div class="bg-toggles essential" id="bgToggles" style="display: none;">
+            <span class="bg-toggles-label" style="display: none;">Preview BG</span>
+            <div class="bg-swatch swatch-checkered active" data-bg="checkered" title="Transparent Checkered"></div>
+            <div class="bg-swatch swatch-black" data-bg="black" title="Solid Black"></div>
+            <div class="bg-swatch swatch-white" data-bg="white" title="Solid White"></div>
+            <div class="bg-swatch swatch-green" data-bg="green" title="Green Screen"></div>
+        </div>
     </div>
 
     <!-- Upload Zone -->
