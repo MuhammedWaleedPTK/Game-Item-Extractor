@@ -161,10 +161,35 @@
 
     // Toggle settings expansion when stuck
     const settingsToggleBtn = document.getElementById('settingsToggleBtn');
+    let isToggling = false; // Flag to prevent scroll jumping from triggering collapse
+
     if (settingsToggleBtn) {
-        settingsToggleBtn.addEventListener('click', () => {
+        settingsToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent document click from immediately closing it
             if (settingsBar.classList.contains('stuck')) {
+                isToggling = true;
                 settingsBar.classList.toggle('expanded');
+
+                // Allow CSS transition to finish before re-enabling scroll collapse
+                setTimeout(() => {
+                    isToggling = false;
+                }, 400);
+            }
+        });
+
+        // Auto-collapse on scroll
+        window.addEventListener('scroll', () => {
+            if (isToggling) return; // Prevent layout shifts during expansion from instantly collapsing it
+
+            if (settingsBar.classList.contains('expanded')) {
+                settingsBar.classList.remove('expanded');
+            }
+        });
+
+        // Auto-collapse on clicking outside
+        document.addEventListener('click', (e) => {
+            if (settingsBar.classList.contains('expanded') && !settingsBar.contains(e.target)) {
+                settingsBar.classList.remove('expanded');
             }
         });
     }
