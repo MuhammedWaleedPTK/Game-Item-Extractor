@@ -31,7 +31,7 @@
 
     // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
-    let mouse = { x: null, y: null, active: false };
+    let mouse = { x: null, y: null, active: false, down: false };
 
     let snake = {
         head: { x: 0, y: 0 },
@@ -64,16 +64,68 @@
         mouse.active = true;
     });
 
-    document.addEventListener('mouseleave', () => {
-        mouse.active = false;
+    document.addEventListener('mousedown', (e) => {
+        if (!e.target.closest('.item-card, .upload-zone, #settingsBar, #downloadAllSection, #resetSection, .modal, button, a, input, select, textarea')) {
+            mouse.down = true;
+        }
     });
 
+    document.addEventListener('mouseup', () => {
+        mouse.down = false;
+    });
+
+    document.addEventListener('mouseleave', () => {
+        mouse.active = false;
+        mouse.down = false;
+    });
+
+    // Helper for Rainbow Mode
+    function hslToRgb(h, s, l) {
+        l /= 100;
+        const a = s * Math.min(l, 1 - l) / 100;
+        const f = n => {
+            const k = (n + h / 30) % 12;
+            const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            return Math.round(255 * color);
+        };
+        return `${f(0)}, ${f(8)}, ${f(4)}`;
+    }
+
     function spawnFood() {
+        let x, y;
+        let valid = false;
+        let maxAttempts = 30;
+
+        for (let i = 0; i < maxAttempts; i++) {
+            x = Math.random() * (bgCanvas.width - 100) + 50;
+            y = Math.random() * (bgCanvas.height - 100) + 50;
+
+            // Check what element is at this screen position
+            let el = document.elementFromPoint(x, y);
+
+            // If it hits the body, html, canvas, or main container, it's an empty background space
+            if (!el ||
+                el === document.body ||
+                el === document.documentElement ||
+                el.id === 'bgCanvas' ||
+                (el.classList && el.classList.contains('container'))) {
+                valid = true;
+                break;
+            }
+        }
+
+        // Fallback to purely random if screen is somehow completely covered
+        if (!valid) {
+            x = Math.random() * (bgCanvas.width - 100) + 50;
+            y = Math.random() * (bgCanvas.height - 100) + 50;
+        }
+
         food.push({
-            x: Math.random() * (bgCanvas.width - 100) + 50,
-            y: Math.random() * (bgCanvas.height - 100) + 50,
+            x: x,
+            y: y,
             pulse: Math.random() * Math.PI * 2,
-            color: getRandomColor()
+            color: getRandomColor(),
+            age: 0
         });
     }
 
@@ -111,8 +163,15 @@
         bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
         const isLight = document.documentElement.getAttribute('data-theme') === 'light';
 
+        let isRainbow = score >= 100;
         let themePrimary = snake.color || '0, 255, 255';
+        if (isRainbow) {
+            let hue = (Date.now() / 15) % 360;
+            themePrimary = hslToRgb(hue, 100, isLight ? 45 : 60);
+        }
+
         let themeDeath = '255, 50, 100'; // Death sparks (bright red)
+        let dynamicThickness = Math.min(snake.thickness + Math.floor(score / 50) * 2, 24);
 
         // --- 1. Snake Movement ---
         if (mouse.active && mouse.x !== null) {
@@ -133,8 +192,13 @@
             snake.angle += (Math.random() - 0.5) * 0.1;
         }
 
-        snake.head.x += Math.cos(snake.angle) * snake.speed;
-        snake.head.y += Math.sin(snake.angle) * snake.speed;
+        let currentSpeed = mouse.down ? snake.speed * 2 : snake.speed;
+        snake.head.x += Math.cos(snake.angle) * currentSpeed;
+        snake.head.y += Math.sin(snake.angle) * currentSpeed;
+
+        if (mouse.down && Math.random() < 0.3) {
+            spawnSparks(snake.head.x, snake.head.y, themePrimary, 1);
+        }
 
         // Screen wrapping
         if (snake.head.x < 0) snake.head.x = bgCanvas.width;
@@ -172,7 +236,7 @@
             let dy = snake.head.y - seg.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < snake.thickness * 0.8) {
+            if (dist < dynamicThickness * 0.8) {
                 // Death!
                 spawnSparks(snake.head.x, snake.head.y, themeDeath, 30);
                 score = 0;
@@ -196,6 +260,27 @@
         // ───  RENDER  ───
         // ═══════════════════════════════
 
+        // Interactive Pulsing Grid
+        let gridSpacing = 40;
+        let gridRadius = 250;
+        let minX = Math.floor((snake.head.x - gridRadius) / gridSpacing) * gridSpacing;
+        let maxX = Math.ceil((snake.head.x + gridRadius) / gridSpacing) * gridSpacing;
+        let minY = Math.floor((snake.head.y - gridRadius) / gridSpacing) * gridSpacing;
+        let maxY = Math.ceil((snake.head.y + gridRadius) / gridSpacing) * gridSpacing;
+
+        for (let x = minX; x <= maxX; x += gridSpacing) {
+            for (let y = minY; y <= maxY; y += gridSpacing) {
+                let dist = Math.sqrt((x - snake.head.x) ** 2 + (y - snake.head.y) ** 2);
+                if (dist < gridRadius) {
+                    let alpha = ((gridRadius - dist) / gridRadius) * 0.3; // Fades out with distance
+                    bgCtx.fillStyle = `rgba(${themePrimary}, ${alpha})`;
+                    bgCtx.beginPath();
+                    bgCtx.arc(x, y, 1.5, 0, Math.PI * 2);
+                    bgCtx.fill();
+                }
+            }
+        }
+
         // Draw Snake Body Trails
         if (snake.history.length > 1) {
             bgCtx.beginPath();
@@ -218,7 +303,7 @@
 
             bgCtx.lineCap = 'round';
             bgCtx.lineJoin = 'round';
-            bgCtx.lineWidth = snake.thickness;
+            bgCtx.lineWidth = dynamicThickness;
             bgCtx.strokeStyle = `rgba(${themePrimary}, 1)`;
             bgCtx.shadowColor = `rgba(${themePrimary}, 1)`;
             bgCtx.shadowBlur = 25; // Brighter glow
@@ -226,7 +311,7 @@
             bgCtx.shadowBlur = 0;
 
             // Draw a brighter inner core
-            bgCtx.lineWidth = snake.thickness * 0.4;
+            bgCtx.lineWidth = dynamicThickness * 0.4;
             bgCtx.strokeStyle = `rgba(255, 255, 255, 0.9)`;
             bgCtx.stroke();
         }
@@ -236,19 +321,23 @@
         bgCtx.shadowColor = `rgba(${themePrimary}, 1)`; // Match glow to body color
         bgCtx.shadowBlur = 20;
         bgCtx.beginPath();
-        bgCtx.arc(snake.head.x, snake.head.y, snake.thickness * 0.8, 0, Math.PI * 2);
+        bgCtx.arc(snake.head.x, snake.head.y, dynamicThickness * 0.8, 0, Math.PI * 2);
         bgCtx.fill();
         bgCtx.shadowBlur = 0;
 
         // Draw Food
         for (let i = 0; i < food.length; i++) {
             let f = food[i];
+            f.age++;
+            let scale = Math.min(f.age / 15, 1); // 0 to 1 over 15 frames
             f.pulse += 0.05;
-            let r = 6 + Math.sin(f.pulse) * 2;
 
-            bgCtx.fillStyle = `rgba(${f.color}, 0.9)`;
-            bgCtx.shadowColor = `rgba(${f.color}, 1)`;
-            bgCtx.shadowBlur = 20; // Extra glow
+            let currentFoodColor = isRainbow ? themePrimary : f.color;
+            let r = (6 + Math.sin(f.pulse) * 2) * scale;
+
+            bgCtx.fillStyle = `rgba(${currentFoodColor}, 0.9)`;
+            bgCtx.shadowColor = `rgba(${currentFoodColor}, 1)`;
+            bgCtx.shadowBlur = 20 * scale; // Extra glow
             bgCtx.beginPath();
             bgCtx.arc(f.x, f.y, r, 0, Math.PI * 2);
             bgCtx.fill();
@@ -1234,7 +1323,7 @@
         const analyzeCanvas = document.createElement('canvas');
         analyzeCanvas.width = img.width;
         analyzeCanvas.height = img.height;
-        const analyzeCtx = analyzeCanvas.getContext('2d');
+        const analyzeCtx = analyzeCanvas.getContext('2d', { willReadFrequently: true });
         analyzeCtx.drawImage(img, 0, 0);
         const fullData = analyzeCtx.getImageData(0, 0, img.width, img.height);
 
@@ -1268,7 +1357,7 @@
         const mainCanvas = document.createElement('canvas');
         mainCanvas.width = processedImg.width;
         mainCanvas.height = processedImg.height;
-        const mainCtx = mainCanvas.getContext('2d');
+        const mainCtx = mainCanvas.getContext('2d', { willReadFrequently: true });
         mainCtx.drawImage(processedImg, 0, 0);
 
         const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);

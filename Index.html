@@ -29,6 +29,7 @@
 
     <!-- Mobile / PWA -->
     <meta name="theme-color" content="#0c0c18">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="SpriteCut AI">
     <link rel="apple-touch-icon" href="favicon.png">
@@ -93,7 +94,7 @@
         </button>
 
         <div class="setting-group">
-            <label>Items to Extract</label>
+            <label for="itemCountSelect">Items to Extract</label>
             <select id="itemCountSelect" class="styled-select">
                 <option value="auto" selected>Auto Detect (Default)</option>
                 <option value="1">1 Item</option>
@@ -105,8 +106,8 @@
             </select>
         </div>
         <div class="setting-group">
-            <label>Quality</label>
-            <div class="quality-toggle" id="qualityToggle">
+            <label id="qualityLabel">Quality</label>
+            <div class="quality-toggle" id="qualityToggle" aria-labelledby="qualityLabel" role="group">
                 <button data-quality="off" class="active">Pixel</button>
                 <button data-quality="medium">Smooth</button>
                 <button data-quality="high">Ultra</button>
@@ -114,27 +115,27 @@
         </div>
         <div class="setting-group shadow-group essential">
             <div class="shadow-header">
-                <label>Drop Shadow</label>
+                <label for="shadowToggle">Drop Shadow</label>
                 <label class="switch">
                     <input type="checkbox" id="shadowToggle">
                     <span class="slider round"></span>
                 </label>
             </div>
-            <select id="shadowDirection" class="styled-select shadow-dir-select" disabled>
+            <select id="shadowDirection" class="styled-select shadow-dir-select" disabled aria-label="Drop shadow direction">
                 <option value="bottom" selected>Drop Shadow</option>
                 <option value="complete">Complete (Glow)</option>
             </select>
-            <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled>
+            <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled aria-label="Drop shadow intensity">
         </div>
         <div class="setting-group shadow-group essential">
             <div class="shadow-header">
-                <label>Padding</label>
+                <label for="paddingSlider">Padding</label>
                 <span id="paddingValue" style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">10%</span>
             </div>
             <input type="range" id="paddingSlider" min="0" max="50" value="10" class="styled-slider">
         </div>
         <div class="setting-group">
-            <label>Export Size</label>
+            <label for="exportSizeSelect">Export Size</label>
             <select id="exportSizeSelect" class="styled-select">
                 <option value="exact">Crop to Exact Fit</option>
                 <option value="64">64 x 64</option>
@@ -145,7 +146,7 @@
             </select>
         </div>
         <div class="setting-group">
-            <label>File Prefix</label>
+            <label for="prefixInput">File Prefix</label>
             <input type="text" id="prefixInput" class="styled-input" value="item_" placeholder="e.g. Sprite_" />
         </div>
 
