@@ -29,95 +29,271 @@
     const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors = [document.getElementById('conn1'), document.getElementById('conn2')];
 
-    // ─── Interactive Background ───
+    // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
-    let particles = [];
-    let mouse = { x: null, y: null, radius: 150 };
+    let mouse = { x: null, y: null, active: false };
 
-    window.addEventListener('mousemove', (e) => {
-        mouse.x = e.x;
-        mouse.y = e.y;
+    let snake = {
+        head: { x: 0, y: 0 },
+        angle: 0,
+        speed: 4,
+        length: 40,    // How many history points to keep
+        history: [],   // Array of {x, y}
+        thickness: 8
+    };
+
+    let food = [];
+    let particles = [];
+    let score = 0;
+
+    const neonColors = [
+        '255, 0, 100', // Hot Pink
+        '0, 255, 255', // Cyan
+        '100, 255, 0', // Lime Green
+        '255, 200, 0', // Gold/Yellow
+        '150, 0, 255', // Purple
+        '255, 50, 50'  // Bright Red
+    ];
+    function getRandomColor() {
+        return neonColors[Math.floor(Math.random() * neonColors.length)];
+    }
+
+    document.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        mouse.active = true;
     });
 
-    class Particle {
-        constructor() {
-            this.x = Math.random() * bgCanvas.width;
-            this.y = Math.random() * bgCanvas.height;
-            this.size = Math.random() * 2 + 1;
-            this.speedX = Math.random() * 1 - 0.5;
-            this.speedY = Math.random() * 1 - 0.5;
+    document.addEventListener('mouseleave', () => {
+        mouse.active = false;
+    });
+
+    function spawnFood() {
+        food.push({
+            x: Math.random() * (bgCanvas.width - 100) + 50,
+            y: Math.random() * (bgCanvas.height - 100) + 50,
+            pulse: Math.random() * Math.PI * 2,
+            color: getRandomColor()
+        });
+    }
+
+    function spawnSparks(x, y, colorStr, count) {
+        for (let i = 0; i < count; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let speed = Math.random() * 5 + 1;
+            particles.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                color: colorStr
+            });
         }
-        update() {
-            this.x += this.speedX;
-            this.y += this.speedY;
+    }
 
-            if (this.x > bgCanvas.width) this.x = 0;
-            else if (this.x < 0) this.x = bgCanvas.width;
-            if (this.y > bgCanvas.height) this.y = 0;
-            else if (this.y < 0) this.y = bgCanvas.height;
+    function resetSnake() {
+        snake.head = { x: bgCanvas.width / 2, y: bgCanvas.height / 2 };
+        snake.angle = Math.random() * Math.PI * 2;
+        snake.history = []; // Start empty so it slithers out naturally
+        snake.length = 40;
+        snake.color = getRandomColor();
+    }
 
-            // Mouse interaction
-            let dx = mouse.x - this.x;
-            let dy = mouse.y - this.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < mouse.radius) {
-                if (mouse.x < this.x && this.x < bgCanvas.width - 50) this.x += 2;
-                if (mouse.x > this.x && this.x > 50) this.x -= 2;
-                if (mouse.y < this.y && this.y < bgCanvas.height - 50) this.y += 2;
-                if (mouse.y > this.y && this.y > 50) this.y -= 2;
+    function initBackground() {
+        resetSnake();
+        score = 0;
+        food = [];
+        particles = [];
+        for (let i = 0; i < 5; i++) spawnFood();
+    }
+
+    function animateBackground() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+        let themePrimary = snake.color || '0, 255, 255';
+        let themeDeath = '255, 50, 100'; // Death sparks (bright red)
+
+        // --- 1. Snake Movement ---
+        if (mouse.active && mouse.x !== null) {
+            // Turn towards mouse
+            let dx = mouse.x - snake.head.x;
+            let dy = mouse.y - snake.head.y;
+            let targetAngle = Math.atan2(dy, dx);
+
+            // Smooth interpolation
+            let diff = targetAngle - snake.angle;
+            // Normalize diff to -PI to PI
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+
+            snake.angle += diff * 0.1; // Turn speed
+        } else {
+            // Wander aimlessly if mouse is off screen
+            snake.angle += (Math.random() - 0.5) * 0.1;
+        }
+
+        snake.head.x += Math.cos(snake.angle) * snake.speed;
+        snake.head.y += Math.sin(snake.angle) * snake.speed;
+
+        // Screen wrapping
+        if (snake.head.x < 0) snake.head.x = bgCanvas.width;
+        if (snake.head.x > bgCanvas.width) snake.head.x = 0;
+        if (snake.head.y < 0) snake.head.y = bgCanvas.height;
+        if (snake.head.y > bgCanvas.height) snake.head.y = 0;
+
+        // Update body history
+        snake.history.unshift({ x: snake.head.x, y: snake.head.y });
+        while (snake.history.length > snake.length) {
+            snake.history.pop();
+        }
+
+        // --- 2. Food Collision ---
+        for (let i = food.length - 1; i >= 0; i--) {
+            let f = food[i];
+            let dx = snake.head.x - f.x;
+            let dy = snake.head.y - f.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < 15) { // Eat radius
+                score += 10;
+                snake.length += 5; // Grow tail
+                spawnSparks(f.x, f.y, f.color, 15); // Sparks match food color!
+                food.splice(i, 1);
+                spawnFood();
             }
         }
-        draw() {
-            const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-            bgCtx.fillStyle = isLight ? 'rgba(108, 92, 231, 0.4)' : 'rgba(162, 155, 254, 0.4)';
+
+        // --- 3. Self Collision (Death) ---
+        // Only check far enough back on the body that we don't instantly hit ourselves
+        for (let i = 20; i < snake.history.length; i++) {
+            let seg = snake.history[i];
+            let dx = snake.head.x - seg.x;
+            let dy = snake.head.y - seg.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist < snake.thickness * 0.8) {
+                // Death!
+                spawnSparks(snake.head.x, snake.head.y, themeDeath, 30);
+                score = 0;
+                resetSnake();
+                break; // Stop checking
+            }
+        }
+
+        // --- 4. Update Particles ---
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.95; // Friction
+            p.vy *= 0.95;
+            p.life -= 0.03;
+            if (p.life <= 0) particles.splice(i, 1);
+        }
+
+        // ═══════════════════════════════
+        // ───  RENDER  ───
+        // ═══════════════════════════════
+
+        // Draw Snake Body Trails
+        if (snake.history.length > 1) {
             bgCtx.beginPath();
-            bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            bgCtx.fill();
-        }
-    }
+            bgCtx.moveTo(snake.history[0].x, snake.history[0].y);
 
-    function initParticles() {
-        particles = [];
-        let count = (bgCanvas.width * bgCanvas.height) / 12000;
-        for (let i = 0; i < count; i++) {
-            particles.push(new Particle());
-        }
-    }
+            for (let i = 1; i < snake.history.length; i++) {
+                // To handle screen wrap nicely in drawing, break line if distance is huge
+                let p1 = snake.history[i - 1];
+                let p2 = snake.history[i];
+                let dx = p2.x - p1.x;
+                let dy = p2.y - p1.y;
+                let dist = Math.sqrt(dx * dx + dy * dy);
 
-    function animateParticles() {
-        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-        for (let i = 0; i < particles.length; i++) {
-            particles[i].update();
-            particles[i].draw();
-
-            for (let j = i; j < particles.length; j++) {
-                let dx = particles[i].x - particles[j].x;
-                let dy = particles[i].y - particles[j].y;
-                let distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < 120) {
-                    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-                    bgCtx.strokeStyle = isLight ? `rgba(108, 92, 231, ${1 - distance / 120})` : `rgba(162, 155, 254, ${1 - distance / 120})`;
-                    bgCtx.lineWidth = 0.5;
-                    bgCtx.beginPath();
-                    bgCtx.moveTo(particles[i].x, particles[i].y);
-                    bgCtx.lineTo(particles[j].x, particles[j].y);
-                    bgCtx.stroke();
+                if (dist > 100) {
+                    bgCtx.moveTo(p2.x, p2.y);
+                } else {
+                    bgCtx.lineTo(p2.x, p2.y);
                 }
             }
+
+            bgCtx.lineCap = 'round';
+            bgCtx.lineJoin = 'round';
+            bgCtx.lineWidth = snake.thickness;
+            bgCtx.strokeStyle = `rgba(${themePrimary}, 1)`;
+            bgCtx.shadowColor = `rgba(${themePrimary}, 1)`;
+            bgCtx.shadowBlur = 25; // Brighter glow
+            bgCtx.stroke();
+            bgCtx.shadowBlur = 0;
+
+            // Draw a brighter inner core
+            bgCtx.lineWidth = snake.thickness * 0.4;
+            bgCtx.strokeStyle = `rgba(255, 255, 255, 0.9)`;
+            bgCtx.stroke();
         }
-        requestAnimationFrame(animateParticles);
+
+        // Draw Snake Head
+        bgCtx.fillStyle = '#fff';
+        bgCtx.shadowColor = `rgba(${themePrimary}, 1)`; // Match glow to body color
+        bgCtx.shadowBlur = 20;
+        bgCtx.beginPath();
+        bgCtx.arc(snake.head.x, snake.head.y, snake.thickness * 0.8, 0, Math.PI * 2);
+        bgCtx.fill();
+        bgCtx.shadowBlur = 0;
+
+        // Draw Food
+        for (let i = 0; i < food.length; i++) {
+            let f = food[i];
+            f.pulse += 0.05;
+            let r = 6 + Math.sin(f.pulse) * 2;
+
+            bgCtx.fillStyle = `rgba(${f.color}, 0.9)`;
+            bgCtx.shadowColor = `rgba(${f.color}, 1)`;
+            bgCtx.shadowBlur = 20; // Extra glow
+            bgCtx.beginPath();
+            bgCtx.arc(f.x, f.y, r, 0, Math.PI * 2);
+            bgCtx.fill();
+
+            // Bright inner core
+            bgCtx.shadowBlur = 0;
+            bgCtx.fillStyle = `rgba(255, 255, 255, 0.8)`;
+            bgCtx.beginPath();
+            bgCtx.arc(f.x, f.y, r * 0.4, 0, Math.PI * 2);
+            bgCtx.fill();
+        }
+        bgCtx.shadowBlur = 0;
+
+        // Draw Particles
+        for (let i = 0; i < particles.length; i++) {
+            let p = particles[i];
+            bgCtx.fillStyle = `rgba(${p.color}, ${p.life})`;
+            bgCtx.shadowColor = `rgba(${p.color}, ${p.life})`;
+            bgCtx.shadowBlur = 8;
+            bgCtx.beginPath();
+            bgCtx.arc(p.x, p.y, 2 * p.life + 1, 0, Math.PI * 2);
+            bgCtx.fill();
+        }
+        bgCtx.shadowBlur = 0;
+
+        // Draw Score
+        if (score > 0) {
+            bgCtx.font = 'bold 20px "Inter", sans-serif';
+            bgCtx.fillStyle = `rgba(${themePrimary}, 0.8)`;
+            bgCtx.fillText(`SCORE: ${score}`, 20, 40);
+        }
+
+        requestAnimationFrame(animateBackground);
     }
+
 
     function resizeBg() {
         bgCanvas.width = window.innerWidth;
         bgCanvas.height = window.innerHeight;
-        initParticles();
+        initBackground();
     }
 
     window.addEventListener('resize', resizeBg);
     resizeBg();
-    animateParticles();
+    animateBackground();
 
     // ─── Settings State & Persistence ───
     let finalCanvases = [];
