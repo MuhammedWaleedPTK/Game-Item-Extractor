@@ -1,5 +1,21 @@
 (async function () {
-    const { removeBackground: imglyRemoveBackground } = await import("https://esm.sh/@imgly/background-removal@1.7.0");
+    const { AutoModel, AutoProcessor, env, RawImage } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1");
+    env.allowLocalModels = false;
+
+    // ─── RMBG-1.4 Model (loaded once, cached globally) ───
+    let rmbgSegmenter = null;
+    async function ensureModelLoaded(onProgress) {
+        if (rmbgSegmenter) return;
+        if (onProgress) onProgress('Loading AI model (~43 MB, cached after first use)...');
+
+        const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1");
+        env.allowLocalModels = false;
+
+        // Use the high-level pipeline to assure perfect pre/post processing mathematics
+        rmbgSegmenter = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+            device: 'webgpu', // Let Transformers.js use GPU if available, falls back to WASM automatically
+        });
+    }
     const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
 
     // ─── DOM refs ───
@@ -906,11 +922,10 @@
         const data = imageData.data;
         const total = data.length / 4;
         let transparentCount = 0;
-        for (let i = 0; i < total; i += 4) {
-            if (data[i * 4 + 3] < 10) transparentCount++;
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] < 10) transparentCount++;
         }
-        const ratio = transparentCount / (total / 4);
-        return ratio > 0.15;
+        return (transparentCount / total) > 0.15;
     }
 
     // ─── Bounding box finder ───
@@ -1391,13 +1406,40 @@
             processedImg = img;
             await new Promise(r => setTimeout(r, 400));
         } else {
+            showMsg(`<span class="spinner"></span> ${prefix}Loading AI model...`);
+            await ensureModelLoaded((msg) => showMsg(`<span class="spinner"></span> ${prefix}${msg}`));
+
             showMsg(`<span class="spinner"></span> ${prefix}Removing background with AI...`);
             const imageUrl = URL.createObjectURL(file);
-            const transparentBlob = await imglyRemoveBackground(imageUrl);
-            const transparentUrl = URL.createObjectURL(transparentBlob);
+            // Use the high-level pipeline to assure perfect pre/post processing mathematics
+            const result = await rmbgSegmenter(imageUrl);
+
+            // Extract the mask RawImage from the result (handles both array and single object)
+            let mask;
+            if (Array.isArray(result)) {
+                const fg = result.find(r => r.label === 'foreground' || r.label === 'LABEL_1' || r.label === 'label') || result[0];
+                mask = fg.mask;
+            } else {
+                mask = result.mask || result;
+            }
+
+            // Apply mask as alpha channel to the original image
+            const resultCanvas = document.createElement('canvas');
+            resultCanvas.width = img.width;
+            resultCanvas.height = img.height;
+            const resultCtx = resultCanvas.getContext('2d');
+            resultCtx.drawImage(img, 0, 0);
+            const pixelData = resultCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
+            for (let i = 0; i < mask.data.length; i++) {
+                pixelData.data[i * 4 + 3] = mask.data[i];
+            }
+            resultCtx.putImageData(pixelData, 0, 0);
+
+            // Convert canvas to image for the rest of the pipeline
             processedImg = new Image();
-            processedImg.src = transparentUrl;
+            processedImg.src = resultCanvas.toDataURL('image/png');
             await new Promise(resolve => processedImg.onload = resolve);
+            URL.revokeObjectURL(imageUrl);
         }
 
         setStep(1, 'done');
