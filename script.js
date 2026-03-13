@@ -23,8 +23,13 @@
     const bgCanvas = document.getElementById('bgCanvas');
     const exportSizeSelect = document.getElementById('exportSizeSelect');
     const shadowToggle = document.getElementById('shadowToggle');
-    const shadowDirection = document.getElementById('shadowDirection');
-    const shadowSlider = document.getElementById('shadowSlider');
+    const shadowColor = document.getElementById('shadowColor');
+    const shadowOpacity = document.getElementById('shadowOpacity');
+    const shadowAngle = document.getElementById('shadowAngle');
+    const shadowDistance = document.getElementById('shadowDistance');
+    const shadowSpread = document.getElementById('shadowSpread');
+    const shadowSize = document.getElementById('shadowSize');
+    const shadowSubControls = document.getElementById('shadowSubControls');
     const paddingSlider = document.getElementById('paddingSlider');
     const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors = [document.getElementById('conn1'), document.getElementById('conn2')];
@@ -461,8 +466,12 @@
 
     // Apply persisted shadow settings
     const savedShadowEnabled = localStorage.getItem('spritecut_shadow_enabled') === 'true';
-    const savedShadowBlur = localStorage.getItem('spritecut_shadow_blur') || '10';
-    const savedShadowDir = localStorage.getItem('spritecut_shadow_dir') || 'bottom';
+    const savedShadowColorVal = localStorage.getItem('spritecut_shadow_color') || '#000000';
+    const savedShadowOpacity = localStorage.getItem('spritecut_shadow_opacity') || '60';
+    const savedShadowAngle = localStorage.getItem('spritecut_shadow_angle') || '135';
+    const savedShadowDistance = localStorage.getItem('spritecut_shadow_distance') || '8';
+    const savedShadowSpread = localStorage.getItem('spritecut_shadow_spread') || '0';
+    const savedShadowSize = localStorage.getItem('spritecut_shadow_size') || '10';
 
     // Apply persisted export size
     const savedExportSize = localStorage.getItem('spritecut_export_size') || '256';
@@ -506,11 +515,23 @@
     }
 
     shadowToggle.checked = savedShadowEnabled;
-    shadowSlider.value = savedShadowBlur;
-    shadowDirection.value = savedShadowDir;
+    shadowColor.value = savedShadowColorVal;
+    shadowOpacity.value = savedShadowOpacity;
+    shadowAngle.value = savedShadowAngle;
+    shadowDistance.value = savedShadowDistance;
+    shadowSpread.value = savedShadowSpread;
+    shadowSize.value = savedShadowSize;
 
-    shadowSlider.disabled = !savedShadowEnabled;
-    shadowDirection.disabled = !savedShadowEnabled;
+    // Update value labels
+    document.getElementById('shadowOpacityVal').innerText = savedShadowOpacity + '%';
+    document.getElementById('shadowAngleVal').innerText = savedShadowAngle + '°';
+    document.getElementById('shadowDistanceVal').innerText = savedShadowDistance + 'px';
+    document.getElementById('shadowSpreadVal').innerText = savedShadowSpread + '%';
+    document.getElementById('shadowSizeVal').innerText = savedShadowSize + 'px';
+
+    // Enable/disable all sub-controls
+    const allShadowInputs = shadowSubControls.querySelectorAll('input');
+    allShadowInputs.forEach(inp => inp.disabled = !savedShadowEnabled);
 
     // Apply persisted quality
     qualityToggle.querySelectorAll('button').forEach(b => {
@@ -568,20 +589,39 @@
         });
     });
 
-    // ─── Shadow Toggles & Slider ───
+    // ─── Shadow Controls ───
+    function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return { r, g, b };
+    }
+
+    function getShadowParams() {
+        const color = hexToRgb(shadowColor.value);
+        const opacity = parseInt(shadowOpacity.value, 10) / 100;
+        const angleDeg = parseInt(shadowAngle.value, 10);
+        const distance = parseInt(shadowDistance.value, 10);
+        const spread = parseInt(shadowSpread.value, 10);
+        const size = parseInt(shadowSize.value, 10);
+
+        // Convert angle to offset (Photoshop: 0° = right, goes counter-clockwise; CSS: we use standard math)
+        const angleRad = (angleDeg * Math.PI) / 180;
+        const offsetX = Math.round(Math.cos(angleRad) * distance);
+        const offsetY = Math.round(Math.sin(angleRad) * distance);
+
+        return { color, opacity, angleDeg, distance, spread, size, offsetX, offsetY };
+    }
+
     function updateShadowVisuals() {
         const isEnabled = shadowToggle.checked;
-        const blurNum = parseInt(shadowSlider.value, 10);
-        const dir = shadowDirection.value;
 
         let filterString = 'none';
         if (isEnabled) {
-            if (dir === 'bottom') {
-                filterString = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
-            } else {
-                // Complete shadow (glow)
-                filterString = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
-            }
+            const p = getShadowParams();
+            // CSS drop-shadow doesn't support spread, so we just use offset + blur + color
+            const blurVal = Math.max(p.size, 0);
+            filterString = `drop-shadow(${p.offsetX}px ${p.offsetY}px ${blurVal}px rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity}))`;
         }
 
         // Update all canvases on screen instantly
@@ -590,21 +630,51 @@
         });
     }
 
+    function setShadowControlsEnabled(enabled) {
+        const allShadowInputs = shadowSubControls.querySelectorAll('input');
+        allShadowInputs.forEach(inp => inp.disabled = !enabled);
+    }
+
     shadowToggle.addEventListener('change', () => {
         const isEnabled = shadowToggle.checked;
-        shadowSlider.disabled = !isEnabled;
-        shadowDirection.disabled = !isEnabled;
+        setShadowControlsEnabled(isEnabled);
         localStorage.setItem('spritecut_shadow_enabled', isEnabled);
         updateShadowVisuals();
     });
 
-    shadowDirection.addEventListener('change', () => {
-        localStorage.setItem('spritecut_shadow_dir', shadowDirection.value);
+    // Individual control listeners
+    shadowColor.addEventListener('input', () => {
+        localStorage.setItem('spritecut_shadow_color', shadowColor.value);
         updateShadowVisuals();
     });
 
-    shadowSlider.addEventListener('input', () => {
-        localStorage.setItem('spritecut_shadow_blur', shadowSlider.value);
+    shadowOpacity.addEventListener('input', () => {
+        document.getElementById('shadowOpacityVal').innerText = shadowOpacity.value + '%';
+        localStorage.setItem('spritecut_shadow_opacity', shadowOpacity.value);
+        updateShadowVisuals();
+    });
+
+    shadowAngle.addEventListener('input', () => {
+        document.getElementById('shadowAngleVal').innerText = shadowAngle.value + '°';
+        localStorage.setItem('spritecut_shadow_angle', shadowAngle.value);
+        updateShadowVisuals();
+    });
+
+    shadowDistance.addEventListener('input', () => {
+        document.getElementById('shadowDistanceVal').innerText = shadowDistance.value + 'px';
+        localStorage.setItem('spritecut_shadow_distance', shadowDistance.value);
+        updateShadowVisuals();
+    });
+
+    shadowSpread.addEventListener('input', () => {
+        document.getElementById('shadowSpreadVal').innerText = shadowSpread.value + '%';
+        localStorage.setItem('spritecut_shadow_spread', shadowSpread.value);
+        updateShadowVisuals();
+    });
+
+    shadowSize.addEventListener('input', () => {
+        document.getElementById('shadowSizeVal').innerText = shadowSize.value + 'px';
+        localStorage.setItem('spritecut_shadow_size', shadowSize.value);
         updateShadowVisuals();
     });
 
@@ -734,29 +804,30 @@
         const isEnabled = shadowToggle.checked;
         if (!isEnabled) return sourceCanvas; // Return original if no shadow
 
-        const blurNum = parseInt(shadowSlider.value, 10);
-        const dir = shadowDirection.value;
+        const p = getShadowParams();
 
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = sourceCanvas.width;
         tempCanvas.height = sourceCanvas.height;
         const ctx = tempCanvas.getContext('2d');
 
-        // Setup shadow
-        if (dir === 'bottom') {
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-            ctx.shadowBlur = blurNum;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = blurNum / 2;
-        } else {
-            // Complete glowing shadow
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-            ctx.shadowBlur = blurNum * 1.5;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
+        // Setup shadow using all parameters
+        ctx.shadowColor = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity})`;
+        ctx.shadowBlur = p.size;
+        ctx.shadowOffsetX = p.offsetX;
+        ctx.shadowOffsetY = p.offsetY;
+
+        // Simulate spread by drawing shadow multiple times with decreasing blur
+        if (p.spread > 0) {
+            const passes = Math.ceil(p.spread / 20); // 1-5 extra passes
+            for (let i = 0; i < passes; i++) {
+                ctx.shadowBlur = Math.max(p.size - (i * 2), 1);
+                ctx.drawImage(sourceCanvas, 0, 0);
+            }
         }
 
-        // Draw image over shadow
+        // Final draw with full settings
+        ctx.shadowBlur = p.size;
         ctx.drawImage(sourceCanvas, 0, 0);
         return tempCanvas;
     }
@@ -1130,13 +1201,9 @@
 
         // Apply initial visual shadow state
         if (shadowToggle.checked) {
-            const blurNum = parseInt(shadowSlider.value, 10);
-            const dir = shadowDirection.value;
-            if (dir === 'bottom') {
-                mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
-            } else {
-                mainCanvas.style.filter = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
-            }
+            const p = getShadowParams();
+            const blurVal = Math.max(p.size, 0);
+            mainCanvas.style.filter = `drop-shadow(${p.offsetX}px ${p.offsetY}px ${blurVal}px rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity}))`;
         } else {
             mainCanvas.style.filter = 'none';
         }
@@ -1170,19 +1237,6 @@
         if (activeSwatch && activeSwatch.dataset.bg !== 'checkered') {
             const colorMap = { black: '#000', white: '#fff', green: '#00ff00' };
             canvasContainer.style.background = colorMap[activeSwatch.dataset.bg];
-        }
-
-        // Apply initial visual shadow state to the completely transparent canvas
-        if (shadowToggle.checked) {
-            const blurNum = parseInt(shadowSlider.value, 10);
-            const dir = shadowDirection.value;
-            if (dir === 'bottom') {
-                mainCanvas.style.filter = `drop-shadow(0px ${blurNum / 2}px ${blurNum}px rgba(0,0,0,0.6))`;
-            } else {
-                mainCanvas.style.filter = `drop-shadow(0px 0px ${blurNum * 1.5}px rgba(0,0,0,0.7))`;
-            }
-        } else {
-            mainCanvas.style.filter = 'none';
         }
 
         return true;

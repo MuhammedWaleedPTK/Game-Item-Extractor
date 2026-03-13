@@ -121,11 +121,37 @@
                     <span class="slider round"></span>
                 </label>
             </div>
-            <select id="shadowDirection" class="styled-select shadow-dir-select" disabled aria-label="Drop shadow direction">
-                <option value="bottom" selected>Drop Shadow</option>
-                <option value="complete">Complete (Glow)</option>
-            </select>
-            <input type="range" id="shadowSlider" min="0" max="30" value="10" class="styled-slider" disabled aria-label="Drop shadow intensity">
+            <div class="shadow-sub-controls" id="shadowSubControls">
+                <div class="shadow-control-row">
+                    <label>Color</label>
+                    <input type="color" id="shadowColor" value="#000000" class="shadow-color-input" disabled>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Opacity</label>
+                    <input type="range" id="shadowOpacity" min="0" max="100" value="60" class="styled-slider shadow-slider" disabled>
+                    <span class="shadow-val" id="shadowOpacityVal">60%</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Angle</label>
+                    <input type="range" id="shadowAngle" min="0" max="360" value="135" class="styled-slider shadow-slider" disabled>
+                    <span class="shadow-val" id="shadowAngleVal">135°</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Distance</label>
+                    <input type="range" id="shadowDistance" min="0" max="50" value="8" class="styled-slider shadow-slider" disabled>
+                    <span class="shadow-val" id="shadowDistanceVal">8px</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Spread</label>
+                    <input type="range" id="shadowSpread" min="0" max="100" value="0" class="styled-slider shadow-slider" disabled>
+                    <span class="shadow-val" id="shadowSpreadVal">0%</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Size</label>
+                    <input type="range" id="shadowSize" min="0" max="50" value="10" class="styled-slider shadow-slider" disabled>
+                    <span class="shadow-val" id="shadowSizeVal">10px</span>
+                </div>
+            </div>
         </div>
         <div class="setting-group shadow-group essential">
             <div class="shadow-header">

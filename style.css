@@ -1006,6 +1006,76 @@ input[type="file"] {
     cursor: not-allowed;
 }
 
+/* Shadow Sub-Controls Panel */
+.shadow-sub-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 0 2px;
+}
+
+.shadow-control-row {
+    display: grid;
+    grid-template-columns: 52px 1fr 38px;
+    align-items: center;
+    gap: 8px;
+}
+
+.shadow-control-row label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.shadow-val {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent-light);
+    text-align: left;
+    white-space: nowrap;
+    min-width: 38px;
+}
+
+.shadow-slider {
+    margin: 2px 0 !important;
+}
+
+.shadow-color-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 32px;
+    height: 24px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    background: transparent;
+    transition: border-color 0.3s ease;
+}
+
+.shadow-color-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.shadow-color-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
+.shadow-color-input:hover {
+    border-color: var(--accent);
+}
+
+.shadow-color-input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 /* Toggle Switch */
 .switch {
     position: relative;
