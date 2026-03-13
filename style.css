@@ -1017,9 +1017,9 @@ input[type="file"] {
 
 .shadow-control-row {
     display: grid;
-    grid-template-columns: 52px 1fr 38px;
+    grid-template-columns: 52px 1fr 40px 14px;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .shadow-control-row label {
@@ -1032,13 +1032,44 @@ input[type="file"] {
     white-space: nowrap;
 }
 
-.shadow-val {
+.shadow-val-input {
+    width: 40px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    color: var(--accent-light);
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--accent-light);
+    text-align: center;
+    padding: 3px 2px;
+    border-radius: 5px;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.3s ease;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.shadow-val-input::-webkit-outer-spin-button,
+.shadow-val-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.shadow-val-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.shadow-val-input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.shadow-unit {
+    font-size: 0.62rem;
+    font-weight: 600;
+    color: var(--text-secondary);
     text-align: left;
-    white-space: nowrap;
-    min-width: 38px;
 }
 
 .shadow-slider {

@@ -415,14 +415,19 @@
     const settingsBar = document.getElementById('settingsBar');
 
     if (settingsAnchor && settingsBar) {
+        let stuckDebounce = null;
         const observer = new IntersectionObserver(
             ([e]) => {
-                if (e.boundingClientRect.top < 21) {
-                    settingsBar.classList.add('stuck');
-                } else {
-                    settingsBar.classList.remove('stuck');
-                    settingsBar.classList.remove('expanded'); // Auto-collapse when un-sticking
-                }
+                clearTimeout(stuckDebounce);
+                const shouldStick = e.boundingClientRect.top < 21;
+                stuckDebounce = setTimeout(() => {
+                    if (shouldStick) {
+                        settingsBar.classList.add('stuck');
+                    } else {
+                        settingsBar.classList.remove('stuck');
+                        settingsBar.classList.remove('expanded');
+                    }
+                }, 50);
             },
             { threshold: [1], rootMargin: "-21px 0px 0px 0px" }
         );
@@ -523,11 +528,11 @@
     shadowSize.value = savedShadowSize;
 
     // Update value labels
-    document.getElementById('shadowOpacityVal').innerText = savedShadowOpacity + '%';
-    document.getElementById('shadowAngleVal').innerText = savedShadowAngle + '°';
-    document.getElementById('shadowDistanceVal').innerText = savedShadowDistance + 'px';
-    document.getElementById('shadowSpreadVal').innerText = savedShadowSpread + '%';
-    document.getElementById('shadowSizeVal').innerText = savedShadowSize + 'px';
+    document.getElementById('shadowOpacityVal').value = savedShadowOpacity;
+    document.getElementById('shadowAngleVal').value = savedShadowAngle;
+    document.getElementById('shadowDistanceVal').value = savedShadowDistance;
+    document.getElementById('shadowSpreadVal').value = savedShadowSpread;
+    document.getElementById('shadowSizeVal').value = savedShadowSize;
 
     // Enable/disable all sub-controls
     const allShadowInputs = shadowSubControls.querySelectorAll('input');
@@ -642,41 +647,34 @@
         updateShadowVisuals();
     });
 
-    // Individual control listeners
+    // Individual control listeners with bidirectional sync
     shadowColor.addEventListener('input', () => {
         localStorage.setItem('spritecut_shadow_color', shadowColor.value);
         updateShadowVisuals();
     });
 
-    shadowOpacity.addEventListener('input', () => {
-        document.getElementById('shadowOpacityVal').innerText = shadowOpacity.value + '%';
-        localStorage.setItem('spritecut_shadow_opacity', shadowOpacity.value);
-        updateShadowVisuals();
-    });
+    function syncSliderAndInput(slider, input, storageKey) {
+        slider.addEventListener('input', () => {
+            input.value = slider.value;
+            localStorage.setItem(storageKey, slider.value);
+            updateShadowVisuals();
+        });
+        input.addEventListener('input', () => {
+            let val = parseInt(input.value, 10);
+            if (isNaN(val)) return;
+            val = Math.max(parseInt(slider.min), Math.min(parseInt(slider.max), val));
+            slider.value = val;
+            input.value = val;
+            localStorage.setItem(storageKey, val);
+            updateShadowVisuals();
+        });
+    }
 
-    shadowAngle.addEventListener('input', () => {
-        document.getElementById('shadowAngleVal').innerText = shadowAngle.value + '°';
-        localStorage.setItem('spritecut_shadow_angle', shadowAngle.value);
-        updateShadowVisuals();
-    });
-
-    shadowDistance.addEventListener('input', () => {
-        document.getElementById('shadowDistanceVal').innerText = shadowDistance.value + 'px';
-        localStorage.setItem('spritecut_shadow_distance', shadowDistance.value);
-        updateShadowVisuals();
-    });
-
-    shadowSpread.addEventListener('input', () => {
-        document.getElementById('shadowSpreadVal').innerText = shadowSpread.value + '%';
-        localStorage.setItem('spritecut_shadow_spread', shadowSpread.value);
-        updateShadowVisuals();
-    });
-
-    shadowSize.addEventListener('input', () => {
-        document.getElementById('shadowSizeVal').innerText = shadowSize.value + 'px';
-        localStorage.setItem('spritecut_shadow_size', shadowSize.value);
-        updateShadowVisuals();
-    });
+    syncSliderAndInput(shadowOpacity, document.getElementById('shadowOpacityVal'), 'spritecut_shadow_opacity');
+    syncSliderAndInput(shadowAngle, document.getElementById('shadowAngleVal'), 'spritecut_shadow_angle');
+    syncSliderAndInput(shadowDistance, document.getElementById('shadowDistanceVal'), 'spritecut_shadow_distance');
+    syncSliderAndInput(shadowSpread, document.getElementById('shadowSpreadVal'), 'spritecut_shadow_spread');
+    syncSliderAndInput(shadowSize, document.getElementById('shadowSizeVal'), 'spritecut_shadow_size');
 
     // ─── Settings Auto-Update ───
     itemCountSelect.addEventListener('change', () => {
