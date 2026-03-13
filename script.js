@@ -38,6 +38,7 @@
     const toast = document.getElementById('toast');
     const bgCanvas = document.getElementById('bgCanvas');
     const exportSizeSelect = document.getElementById('exportSizeSelect');
+    const removeBgToggle = document.getElementById('removeBgToggle');
     const shadowToggle = document.getElementById('shadowToggle');
     const shadowColor = document.getElementById('shadowColor');
     const shadowOpacity = document.getElementById('shadowOpacity');
@@ -1401,7 +1402,11 @@
         setStep(1, 'active');
         let processedImg;
 
-        if (alreadyTransparent) {
+        if (!removeBgToggle.checked) {
+            showMsg(`✅ ${prefix}Background removal disabled, skipping...`);
+            processedImg = img;
+            await new Promise(r => setTimeout(r, 400));
+        } else if (alreadyTransparent) {
             showMsg(`✅ ${prefix}Image already has transparency — skipping background removal!`);
             processedImg = img;
             await new Promise(r => setTimeout(r, 400));
@@ -1431,7 +1436,15 @@
             resultCtx.drawImage(img, 0, 0);
             const pixelData = resultCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
             for (let i = 0; i < mask.data.length; i++) {
-                pixelData.data[i * 4 + 3] = mask.data[i];
+                let alpha = mask.data[i];
+                // Apply a contrast stretch to clean up the ML model's unconfident edges
+                // Values below 60 become fully transparent (cleans up faint white background)
+                // Values above 160 become fully opaque (fills in missing/transparent parts of foreground)
+                if (alpha < 60) alpha = 0;
+                else if (alpha > 160) alpha = 255;
+                else alpha = ((alpha - 60) / 100) * 255;
+
+                pixelData.data[i * 4 + 3] = Math.round(alpha);
             }
             resultCtx.putImageData(pixelData, 0, 0);
 
