@@ -1,21 +1,5 @@
 (async function () {
-    const { AutoModel, AutoProcessor, env, RawImage } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1");
-    env.allowLocalModels = false;
-
-    // ─── RMBG-1.4 Model (loaded once, cached globally) ───
-    let rmbgSegmenter = null;
-    async function ensureModelLoaded(onProgress) {
-        if (rmbgSegmenter) return;
-        if (onProgress) onProgress('Loading AI model (~43 MB, cached after first use)...');
-
-        const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1");
-        env.allowLocalModels = false;
-
-        // Use the high-level pipeline to assure perfect pre/post processing mathematics
-        rmbgSegmenter = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
-            device: 'webgpu', // Let Transformers.js use GPU if available, falls back to WASM automatically
-        });
-    }
+    const { removeBackground: imglyRemoveBackground } = await import("https://esm.sh/@imgly/background-removal@1.7.0");
     const { default: JSZip } = await import("https://esm.sh/jszip@3.10.1");
 
     // ─── DOM refs ───
@@ -499,6 +483,12 @@
     const savedExportSize = localStorage.getItem('spritecut_export_size') || '256';
     exportSizeSelect.value = savedExportSize;
 
+    // Apply persisted remove bg toggle
+    const savedRemoveBg = localStorage.getItem('spritecut_remove_bg');
+    if (savedRemoveBg !== null) {
+        removeBgToggle.checked = savedRemoveBg === 'true';
+    }
+
     // Apply persisted padding
     const savedPadding = localStorage.getItem('spritecut_padding') || '10';
     if (paddingSlider) {
@@ -694,6 +684,13 @@
     syncSliderAndInput(shadowSize, document.getElementById('shadowSizeVal'), 'spritecut_shadow_size');
 
     // ─── Settings Auto-Update ───
+    removeBgToggle.addEventListener('change', () => {
+        localStorage.setItem('spritecut_remove_bg', removeBgToggle.checked);
+        if (currentFiles.length > 0) {
+            processAllFiles(currentFiles);
+        }
+    });
+
     itemCountSelect.addEventListener('change', () => {
         if (currentFiles.length > 0) {
             processAllFiles(currentFiles);
@@ -921,12 +918,10 @@
     // ─── Transparency detection ───
     function isAlreadyTransparent(imageData) {
         const data = imageData.data;
-        const total = data.length / 4;
-        let transparentCount = 0;
         for (let i = 3; i < data.length; i += 4) {
-            if (data[i] < 10) transparentCount++;
+            if (data[i] < 255) return true;
         }
-        return (transparentCount / total) > 0.15;
+        return false;
     }
 
     // ─── Bounding box finder ───
@@ -938,7 +933,7 @@
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const alpha = data[(y * width + x) * 4 + 3];
-                if (alpha > 10) {
+                if (alpha > 0) {
                     if (x < minX) minX = x;
                     if (x > maxX) maxX = x;
                     if (y < minY) minY = y;
@@ -958,7 +953,7 @@
         const visited = new Uint8Array(width * height);
         const components = [];
 
-        const isOpaque = (idx) => data[idx * 4 + 3] > 10;
+        const isOpaque = (idx) => data[idx * 4 + 3] > 0;
 
         // Iterative flood fill
         for (let y = 0; y < height; y++) {
@@ -1411,46 +1406,18 @@
             processedImg = img;
             await new Promise(r => setTimeout(r, 400));
         } else {
-            showMsg(`<span class="spinner"></span> ${prefix}Loading AI model...`);
-            await ensureModelLoaded((msg) => showMsg(`<span class="spinner"></span> ${prefix}${msg}`));
-
             showMsg(`<span class="spinner"></span> ${prefix}Removing background with AI...`);
             const imageUrl = URL.createObjectURL(file);
-            // Use the high-level pipeline to assure perfect pre/post processing mathematics
-            const result = await rmbgSegmenter(imageUrl);
-
-            // Extract the mask RawImage from the result (handles both array and single object)
-            let mask;
-            if (Array.isArray(result)) {
-                const fg = result.find(r => r.label === 'foreground' || r.label === 'LABEL_1' || r.label === 'label') || result[0];
-                mask = fg.mask;
-            } else {
-                mask = result.mask || result;
-            }
-
-            // Apply mask as alpha channel to the original image
-            const resultCanvas = document.createElement('canvas');
-            resultCanvas.width = img.width;
-            resultCanvas.height = img.height;
-            const resultCtx = resultCanvas.getContext('2d');
-            resultCtx.drawImage(img, 0, 0);
-            const pixelData = resultCtx.getImageData(0, 0, resultCanvas.width, resultCanvas.height);
-            for (let i = 0; i < mask.data.length; i++) {
-                let alpha = mask.data[i];
-                // Apply a contrast stretch to clean up the ML model's unconfident edges
-                // Values below 60 become fully transparent (cleans up faint white background)
-                // Values above 160 become fully opaque (fills in missing/transparent parts of foreground)
-                if (alpha < 60) alpha = 0;
-                else if (alpha > 160) alpha = 255;
-                else alpha = ((alpha - 60) / 100) * 255;
-
-                pixelData.data[i * 4 + 3] = Math.round(alpha);
-            }
-            resultCtx.putImageData(pixelData, 0, 0);
-
-            // Convert canvas to image for the rest of the pipeline
+            const blob = await imglyRemoveBackground(imageUrl, {
+                progress: (key, current, total) => {
+                    if (key === 'compute:inference') return;
+                    const percent = Math.round((current / total) * 100) || 0;
+                    showMsg(`<span class="spinner"></span> ${prefix}Loading AI model... ${percent}%`);
+                }
+            });
+            const bgUrl = URL.createObjectURL(blob);
             processedImg = new Image();
-            processedImg.src = resultCanvas.toDataURL('image/png');
+            processedImg.src = bgUrl;
             await new Promise(resolve => processedImg.onload = resolve);
             URL.revokeObjectURL(imageUrl);
         }
