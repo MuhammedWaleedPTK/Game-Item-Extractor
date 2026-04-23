@@ -809,6 +809,7 @@
         connectors.forEach(c => c.classList.remove('done'));
         imageUpload.value = '';
         itemCountSelect.value = 'auto';
+        if (window.clarity) clarity("event", "reset_workspace");
     });
 
     // ─── Bake Shadow function for Downloads ───
@@ -869,6 +870,7 @@
             link.click();
             URL.revokeObjectURL(link.href);
         } finally {
+            if (window.clarity) clarity("event", "download_all");
             downloadAllBtn.disabled = false;
             downloadAllBtn.innerHTML = originalText;
         }
@@ -908,6 +910,7 @@
             const blob = await new Promise(resolve => bakedCanvas.toBlob(resolve));
             const item = new ClipboardItem({ [blob.type]: blob });
             await navigator.clipboard.write([item]);
+            if (window.clarity) clarity("event", "copy_item");
             showToast("✨ Item copied to clipboard!");
         } catch (err) {
             console.error("Clipboard Error:", err);
@@ -1253,6 +1256,7 @@
 
     // ─── Process all files sequentially ───
     async function processAllFiles(files) {
+        if (window.clarity) clarity("event", "process_start");
         resultsDiv.innerHTML = '';
         finalCanvases = [];
         previewStrip.innerHTML = '';
