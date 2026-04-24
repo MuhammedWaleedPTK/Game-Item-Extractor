@@ -34,6 +34,10 @@
     const paddingSlider = document.getElementById('paddingSlider');
     const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
     const connectors = [document.getElementById('conn1'), document.getElementById('conn2')];
+    const helpBtn = document.getElementById('helpBtn');
+    const helpModal = document.getElementById('helpModal');
+    const closeModal = document.getElementById('closeModal');
+    const gotItBtn = document.getElementById('gotItBtn');
 
     // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
@@ -563,6 +567,21 @@
         localStorage.setItem('spritecut_theme', newTheme);
         themeToggle.innerText = newTheme === 'light' ? '☀️' : '🌙';
     });
+
+    // ─── Help Modal Logic ───
+    if (helpBtn && helpModal) {
+        helpBtn.addEventListener('click', () => {
+            helpModal.classList.add('visible');
+            if (window.clarity) clarity("event", "open_help");
+        });
+
+        const hideModal = () => helpModal.classList.remove('visible');
+        closeModal.addEventListener('click', hideModal);
+        gotItBtn.addEventListener('click', hideModal);
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) hideModal();
+        });
+    }
 
     // ─── Quality Toggle ───
     qualityToggle.addEventListener('click', (e) => {
