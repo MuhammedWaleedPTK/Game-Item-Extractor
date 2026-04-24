@@ -244,6 +244,11 @@
         <button class="reset-btn" id="resetBtn">↻ Process Another Image</button>
     </div>
 
+    <!-- Report a Problem -->
+    <div class="report-section">
+        <a href="#" class="report-link" id="reportLink">Report a Problem</a>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="toast">Copied to Clipboard!</div>
 </div>
@@ -340,6 +345,18 @@
         </div>
 
         <button class="modal-btn" id="gotItBtn">Got it!</button>
+    </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" id="reportModal">
+    <div class="modal-content">
+        <button class="modal-close" id="closeReportModal">×</button>
+        <h2>Report a Problem</h2>
+        <div class="help-text" style="text-align: center; margin-bottom: 24px;">
+            <p>Is the AI failing to cut your image correctly? Help us improve by reporting it.</p>
+        </div>
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdMCr1kvx84muU5E7HM01GZai-PioXMhr9Fi2VODVX940vdkw/viewform?usp=sf_link" target="_blank" class="modal-btn" id="submitReportBtn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Submit Bug Report</a>
     </div>
 </div>
 

@@ -40,6 +40,9 @@
     const helpModal = document.getElementById('helpModal');
     const closeModal = document.getElementById('closeModal');
     const gotItBtn = document.getElementById('gotItBtn');
+    const reportLink = document.getElementById('reportLink');
+    const reportModal = document.getElementById('reportModal');
+    const closeReportModal = document.getElementById('closeReportModal');
 
     // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
@@ -582,6 +585,29 @@
         gotItBtn.addEventListener('click', hideModal);
         helpModal.addEventListener('click', (e) => {
             if (e.target === helpModal) hideModal();
+        });
+    }
+
+    // ─── Report Modal Logic ───
+    if (reportLink && reportModal) {
+        const showReport = (e) => {
+            if (e) e.preventDefault();
+            reportModal.classList.add('visible');
+            if (window.clarity) clarity("event", "open_report");
+        };
+        const hideReport = () => reportModal.classList.remove('visible');
+
+        reportLink.addEventListener('click', showReport);
+        closeReportModal.addEventListener('click', hideReport);
+        reportModal.addEventListener('click', (e) => {
+            if (e.target === reportModal) hideReport();
+        });
+
+        // Delegate listener for the dynamic "Detection failed" link
+        progressMsg.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'failReportLink') {
+                showReport(e);
+            }
         });
     }
 
@@ -1412,7 +1438,7 @@
         }
 
         if (globalItemCount === 0) {
-            showMsg('❌ Could not detect any items in any of the uploaded images.', true);
+            showMsg('❌ Detection failed? <a href="#" id="failReportLink" style="color: var(--accent-light); text-decoration: underline; cursor: pointer;">Click here to send us the image so we can fix it</a>.', true);
         } else {
             const sizeSetting = document.getElementById('exportSizeSelect').value;
             const sizeText = sizeSetting === 'exact' ? 'exact-fit' : `${sizeSetting}×${sizeSetting}`;
