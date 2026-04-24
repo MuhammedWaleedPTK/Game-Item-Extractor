@@ -15,7 +15,9 @@
     const resetSection = document.getElementById('resetSection');
     const resetBtn = document.getElementById('resetBtn');
     const qualityToggle = document.getElementById('qualityToggle');
-    const itemCountSelect = document.getElementById('itemCountSelect');
+    const itemCountToggle = document.getElementById('itemCountToggle');
+    const itemCountManual = document.getElementById('itemCountManual');
+    const itemCountCustomBtn = document.getElementById('itemCountCustomBtn');
     const themeToggle = document.getElementById('themeToggle');
     const prefixInput = document.getElementById('prefixInput');
     const bgToggles = document.getElementById('bgToggles');
@@ -710,9 +712,42 @@
         }
     });
 
-    itemCountSelect.addEventListener('change', () => {
+    itemCountToggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+
+        // If clicking the custom button
+        if (btn === itemCountCustomBtn) {
+            itemCountToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            itemCountCustomBtn.style.display = 'none';
+            itemCountManual.style.display = 'inline-block';
+            itemCountManual.focus();
+            return;
+        }
+
+        // Standard preset button
+        itemCountToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Hide manual input if visible
+        itemCountManual.style.display = 'none';
+        itemCountCustomBtn.style.display = 'inline-block';
+
         if (currentFiles.length > 0) {
             processAllFiles(currentFiles);
+        }
+    });
+
+    itemCountManual.addEventListener('change', () => {
+        if (currentFiles.length > 0) {
+            processAllFiles(currentFiles);
+        }
+    });
+
+    itemCountManual.addEventListener('blur', () => {
+        if (itemCountManual.value === '') {
+            itemCountManual.style.display = 'none';
+            itemCountCustomBtn.style.display = 'inline-block';
         }
     });
 
@@ -827,7 +862,14 @@
         steps.forEach(s => { s.classList.remove('active', 'done'); });
         connectors.forEach(c => c.classList.remove('done'));
         imageUpload.value = '';
-        itemCountSelect.value = 'auto';
+        
+        // Reset Item Count
+        itemCountToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        itemCountToggle.querySelector('[data-value="auto"]').classList.add('active');
+        itemCountManual.value = '';
+        itemCountManual.style.display = 'none';
+        itemCountCustomBtn.style.display = 'inline-block';
+
         if (window.clarity) clarity("event", "reset_workspace");
     });
 
@@ -1458,7 +1500,16 @@
         mainCtx.drawImage(processedImg, 0, 0);
 
         const mainData = mainCtx.getImageData(0, 0, processedImg.width, processedImg.height);
-        const targetCountStr = document.getElementById('itemCountSelect').value;
+        
+        // Get target count from new UI
+        let targetCountStr = 'auto';
+        const activeBtn = itemCountToggle.querySelector('button.active');
+        if (activeBtn) {
+            targetCountStr = activeBtn.dataset.value || 'auto';
+        } else if (itemCountManual.style.display !== 'none' && itemCountManual.value) {
+            targetCountStr = itemCountManual.value;
+        }
+
         const regions = findItemRegions(mainData, processedImg.width, processedImg.height, targetCountStr);
 
         let itemCount = 0;

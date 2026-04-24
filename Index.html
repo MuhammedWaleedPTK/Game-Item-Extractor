@@ -103,16 +103,18 @@
         </button>
 
         <div class="setting-group">
-            <label for="itemCountSelect">Items to Extract</label>
-            <select id="itemCountSelect" class="styled-select">
-                <option value="auto" selected>Auto Detect (Default)</option>
-                <option value="1">1 Item</option>
-                <option value="2">2 Items</option>
-                <option value="3">3 Items</option>
-                <option value="4">4 Items</option>
-                <option value="5">5 Items</option>
-                <option value="6">6 Items</option>
-            </select>
+            <label id="itemCountLabel">Items to Extract</label>
+            <div class="item-count-toggle" id="itemCountToggle" aria-labelledby="itemCountLabel" role="group">
+                <button data-value="auto" class="active" title="Auto Detect Items">✨ Auto</button>
+                <button data-value="1">1</button>
+                <button data-value="2">2</button>
+                <button data-value="3">3</button>
+                <button data-value="4">4</button>
+                <button data-value="5">5</button>
+                <button data-value="6">6</button>
+                <button id="itemCountCustomBtn" title="Type custom count">⌨️</button>
+                <input type="number" id="itemCountManual" class="item-count-manual" min="1" max="100" placeholder="#" style="display: none;">
+            </div>
         </div>
         <div class="setting-group essential" style="flex-direction: row; justify-content: space-between; align-items: center; gap: 10px;">
             <label for="removeBgToggle" style="margin-bottom: 0;">Remove Background</label>
@@ -316,6 +318,23 @@
                 <div class="setting-item">
                     <strong>File Prefix:</strong> 
                     <span>Set a custom name (e.g., <i>Sprite_</i>) for your exported files.</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-guide">
+            <hr>
+            <h3>🎮 Hidden Background Game</h3>
+            <div class="help-step">
+                <div class="help-icon">🐍</div>
+                <div class="help-text">
+                    <p>To keep you entertained while the AI processes your images, we've added an interactive <b>Neon Snake</b> game to the background!</p>
+                    <div class="game-instructions">
+                        <div class="instr-item"><span>Move:</span> The snake follows your cursor.</div>
+                        <div class="instr-item"><span>Boost:</span> Click & hold anywhere to speed up.</div>
+                        <div class="instr-item"><span>Eat:</span> Collect neon food to grow your tail.</div>
+                        <div class="instr-item"><span>Goal:</span> Reach <b>100 points</b> for Rainbow Mode!</div>
+                    </div>
                 </div>
             </div>
         </div>

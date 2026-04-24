@@ -834,9 +834,8 @@ input[type="file"] {
     flex-direction: column;
     gap: 8px;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    max-width: 300px;
+    max-width: 500px;
     opacity: 1;
-    overflow: hidden;
 }
 
 .settings-bar.stuck:not(.expanded) .setting-group:not(.essential),
@@ -895,6 +894,81 @@ input[type="file"] {
     background: var(--accent);
     color: #fff;
     box-shadow: 0 2px 10px var(--accent-glow);
+}
+
+.item-count-toggle {
+    display: flex;
+    gap: 2px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 3px;
+    border: 1px solid var(--border);
+}
+
+.item-count-toggle button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 7px 10px;
+    min-width: 34px;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.item-count-toggle button[data-value="auto"] {
+    padding: 7px 14px;
+    min-width: 70px;
+}
+
+#itemCountCustomBtn {
+    padding: 7px;
+    min-width: 34px;
+    font-size: 1.1rem;
+}
+
+.item-count-toggle button:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.item-count-toggle button.active {
+    background: linear-gradient(135deg, var(--accent), #5b4bd5);
+    color: #fff;
+    box-shadow: 0 4px 12px var(--accent-glow);
+}
+
+.item-count-manual {
+    width: 44px;
+    height: 31px; /* Match button height exactly */
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    color: var(--accent-light);
+    border-radius: 8px;
+    padding: 0;
+    margin: 0;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: all 0.3s ease;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.item-count-manual::-webkit-outer-spin-button,
+.item-count-manual::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.item-count-manual:focus {
+    box-shadow: 0 0 8px var(--accent-glow);
+    background: var(--bg-primary);
 }
 
 /* ─── Image Group Header ─── */
@@ -1350,12 +1424,34 @@ input:checked+.slider:before {
     }
 
     .settings-bar.stuck {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         flex-direction: row;
         /* Keep row for sticky */
         overflow-x: auto;
         /* Allow scrolling essential options */
         padding: 8px 16px;
         border-radius: 16px;
+    }
+
+    .item-count-controls {
+        display: flex;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    .item-count-controls button {
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg-secondary);
+        font-size: 0.8rem;
+    }
+
+    .item-count-controls button.active {
+        background: var(--accent);
+        color: white;
     }
 
     .step-connector {
@@ -1598,5 +1694,59 @@ input:checked+.slider:before {
     }
     .modal-content h2 {
         font-size: 1.5rem;
+    }
+}
+
+/* ─── Game Guide Styles ─── */
+.game-guide {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.game-guide hr {
+    border: 0;
+    height: 1px;
+    background: var(--glass-border);
+    margin-bottom: 24px;
+}
+
+.game-guide h3 {
+    font-size: 1.3rem;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.game-instructions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.instr-item {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+}
+
+.instr-item:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+}
+
+.instr-item span {
+    color: var(--accent-light);
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+@media (max-width: 480px) {
+    .game-instructions {
+        grid-template-columns: 1fr;
     }
 }
