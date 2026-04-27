@@ -350,13 +350,16 @@
 
 <!-- Report Modal -->
 <div class="modal-overlay" id="reportModal">
-    <div class="modal-content">
+    <div class="modal-content report-modal-content">
         <button class="modal-close" id="closeReportModal">×</button>
         <h2>Report a Problem</h2>
-        <div class="help-text" style="text-align: center; margin-bottom: 24px;">
-            <p>Is the AI failing to cut your image correctly? Help us improve by reporting it.</p>
+        <div class="report-form-container">
+            <!-- Simple Form (No Login) -->
+            <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSdMCr1kvx84muU5E7HM01GZai-PioXMhr9Fi2VODVX940vdkw/viewform?embedded=true" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
         </div>
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLSdMCr1kvx84muU5E7HM01GZai-PioXMhr9Fi2VODVX940vdkw/viewform?usp=sf_link" target="_blank" class="modal-btn" id="submitReportBtn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Submit Bug Report</a>
+        <div class="report-footer-note">
+            <p>Need to send us the specific image that failed? <a href="https://docs.google.com/forms/d/e/1FAIpQLSfdTePdOelKePMwarwdYP4mA4iv3PKsPzaPnL8NbCHhgl77yg/viewform?usp=sf_link" target="_blank">Click here to upload a file via our secure portal</a>.</p>
+        </div>
     </div>
 </div>
 

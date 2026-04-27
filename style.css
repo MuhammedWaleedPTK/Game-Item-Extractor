@@ -1773,3 +1773,49 @@ input:checked+.slider:before {
     color: var(--accent-light);
     border-bottom-color: var(--accent-light);
 }
+
+/* ─── Embedded Report Modal Styles ─── */
+.report-modal-content {
+    max-width: 700px !important;
+    padding: 30px 15px 15px 15px !important;
+}
+
+.report-form-container {
+    width: 100%;
+    height: 75vh;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--glass-border);
+}
+
+.report-form-container iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.report-footer-note {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid var(--glass-border);
+    text-align: center;
+}
+
+.report-footer-note p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.report-footer-note a {
+    color: var(--accent-light);
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+.report-footer-note a:hover {
+    color: var(--success);
+}
+
