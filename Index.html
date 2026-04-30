@@ -82,6 +82,8 @@
     <div class="top-controls">
         <div class="help-btn" id="helpBtn" title="How to Use">❓</div>
         <div class="theme-toggle" id="themeToggle" title="Toggle Light/Dark Mode">🌙</div>
+        <div class="snake-toggle" id="snakeToggle" title="Toggle Background Snake Game">🐍</div>
+        <a href="#" class="report-link" id="reportLink" title="Report a Problem">🪲</a>
     </div>
 
     <!-- Header -->
@@ -94,7 +96,7 @@
     <div id="settingsAnchor" style="position: relative; top: -20px; height: 1px; pointer-events: none;"></div>
 
     <!-- Settings Bar -->
-    <div class="settings-bar" id="settingsBar">
+    <div class="settings-bar collapsed" id="settingsBar">
         <!-- Expand/Collapse Toggle Button -->
         <button class="settings-toggle-btn" id="settingsToggleBtn" title="Toggle Settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -237,20 +239,17 @@
     <!-- Results -->
     <div id="results"></div>
 
-    <!-- Download All -->
+    <!-- Sticky Footer Actions -->
     <div class="download-all-section" id="downloadAllSection">
         <button class="download-all-btn" id="downloadAllBtn">📦 Download All as ZIP</button>
     </div>
 
-    <!-- Reset -->
+    <!-- Reset / Process Another -->
     <div class="reset-section" id="resetSection">
         <button class="reset-btn" id="resetBtn">↻ Process Another Image</button>
     </div>
 
-    <!-- Report a Problem -->
-    <div class="report-section">
-        <a href="#" class="report-link" id="reportLink">Report a Problem</a>
-    </div>
+
 
     <!-- Toast Notification -->
     <div id="toast" class="toast">Copied to Clipboard!</div>
@@ -356,12 +355,12 @@
     <div class="modal-content report-modal-content">
         <button class="modal-close" id="closeReportModal">×</button>
         <h2>Report a Problem</h2>
+        <div class="report-footer-note">
+            <p>Need to send us the specific image that failed? <a href="https://docs.google.com/forms/d/e/1FAIpQLSfdTePdOelKePMwarwdYP4mA4iv3PKsPzaPnL8NbCHhgl77yg/viewform?usp=sf_link" target="_blank">Click here to upload a file via our secure portal</a>.</p>
+        </div>
         <div class="report-form-container">
             <!-- Simple Form (No Login) -->
             <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSdMCr1kvx84muU5E7HM01GZai-PioXMhr9Fi2VODVX940vdkw/viewform?embedded=true" frameborder="0" marginheight="0" marginwidth="0">Loading…</iframe>
-        </div>
-        <div class="report-footer-note">
-            <p>Need to send us the specific image that failed? <a href="https://docs.google.com/forms/d/e/1FAIpQLSfdTePdOelKePMwarwdYP4mA4iv3PKsPzaPnL8NbCHhgl77yg/viewform?usp=sf_link" target="_blank">Click here to upload a file via our secure portal</a>.</p>
         </div>
     </div>
 </div>

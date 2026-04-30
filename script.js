@@ -44,6 +44,13 @@
     const reportModal = document.getElementById('reportModal');
     const closeReportModal = document.getElementById('closeReportModal');
     const progressBarFill = document.getElementById('progressBarFill');
+    const snakeToggle = document.getElementById('snakeToggle');
+
+    // ─── Interactive Background State ───
+    let isSnakeEnabled = localStorage.getItem('spritecut_snake_enabled') !== 'false';
+    if (!isSnakeEnabled && snakeToggle) {
+        snakeToggle.classList.add('off');
+    }
 
     // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
@@ -177,6 +184,10 @@
 
     function animateBackground() {
         bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        if (!isSnakeEnabled) {
+            requestAnimationFrame(animateBackground);
+            return;
+        }
         const isLight = document.documentElement.getAttribute('data-theme') === 'light';
 
         let isRainbow = score >= 100;
@@ -434,8 +445,13 @@
                 stuckDebounce = setTimeout(() => {
                     if (shouldStick) {
                         settingsBar.classList.add('stuck');
+                        settingsBar.classList.remove('collapsed');
                     } else {
                         settingsBar.classList.remove('stuck');
+                        // If it wasn't expanded while stuck, return to collapsed state at top
+                        if (!settingsBar.classList.contains('expanded')) {
+                            settingsBar.classList.add('collapsed');
+                        }
                         settingsBar.classList.remove('expanded');
                     }
                 }, 50);
@@ -449,40 +465,64 @@
     const settingsToggleBtn = document.getElementById('settingsToggleBtn');
     let isToggling = false; // Flag to prevent scroll jumping from triggering collapse
 
+    const toggleSettings = (e) => {
+        if (e) e.stopPropagation();
+        isToggling = true;
+        if (settingsBar.classList.contains('stuck')) {
+            settingsBar.classList.toggle('expanded');
+        } else {
+            settingsBar.classList.toggle('collapsed');
+        }
+        setTimeout(() => {
+            isToggling = false;
+        }, 400);
+    };
+
     if (settingsToggleBtn) {
-        settingsToggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // prevent document click from immediately closing it
-            if (settingsBar.classList.contains('stuck')) {
-                isToggling = true;
-                settingsBar.classList.toggle('expanded');
+        settingsToggleBtn.addEventListener('click', toggleSettings);
+    }
 
-                // Allow CSS transition to finish before re-enabling scroll collapse
-                setTimeout(() => {
-                    isToggling = false;
-                }, 400);
+    if (settingsBar) {
+        settingsBar.addEventListener('click', (e) => {
+            const isCollapsed = settingsBar.classList.contains('collapsed');
+            const isCompactStuck = settingsBar.classList.contains('stuck') && !settingsBar.classList.contains('expanded');
+            if (isCollapsed || isCompactStuck) {
+                toggleSettings(e);
             }
         });
+    }
 
-        // Auto-collapse on scroll (with threshold to prevent layout shift glitches)
-        let expandScrollY = 0;
-        window.addEventListener('scroll', () => {
-            if (isToggling) {
-                expandScrollY = window.scrollY;
-                return;
-            }
+    // Auto-collapse on scroll (with threshold to prevent layout shift glitches)
+    let expandScrollY = 0;
+    window.addEventListener('scroll', () => {
+        if (isToggling) {
+            expandScrollY = window.scrollY;
+            return;
+        }
 
-            if (settingsBar.classList.contains('expanded')) {
-                const delta = Math.abs(window.scrollY - expandScrollY);
-                if (delta > 20) { // Only collapse if they actually scrolled a bit
-                    settingsBar.classList.remove('expanded');
-                }
-            }
-        });
-
-        // Auto-collapse on clicking outside
-        document.addEventListener('click', (e) => {
-            if (settingsBar.classList.contains('expanded') && !settingsBar.contains(e.target)) {
+        if (settingsBar.classList.contains('expanded')) {
+            const delta = Math.abs(window.scrollY - expandScrollY);
+            if (delta > 20) { // Only collapse if they actually scrolled a bit
                 settingsBar.classList.remove('expanded');
+            }
+        }
+    });
+
+    // Auto-collapse on clicking outside
+    document.addEventListener('click', (e) => {
+        if (settingsBar.classList.contains('expanded') && !settingsBar.contains(e.target)) {
+            settingsBar.classList.remove('expanded');
+        }
+    });
+
+    // Snake Game Toggle
+    if (snakeToggle) {
+        snakeToggle.addEventListener('click', () => {
+            isSnakeEnabled = !isSnakeEnabled;
+            snakeToggle.classList.toggle('off', !isSnakeEnabled);
+            localStorage.setItem('spritecut_snake_enabled', isSnakeEnabled);
+            if (isSnakeEnabled) {
+                initBackground();
             }
         });
     }
