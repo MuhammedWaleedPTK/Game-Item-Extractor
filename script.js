@@ -65,6 +65,43 @@
         thickness: 8
     };
 
+    // ─── Favicon Animation ───
+    function initFaviconAnimation() {
+        const favicon = document.querySelector('link[rel="icon"]');
+        if (!favicon) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.src = 'logo.png';
+
+        img.onload = () => {
+            let angle = 0;
+            function animate() {
+                ctx.clearRect(0, 0, 32, 32);
+                ctx.save();
+                ctx.translate(16, 16);
+                
+                // Subtle pulse + very slow rotation
+                const scale = 0.9 + Math.sin(Date.now() / 1000) * 0.1;
+                ctx.scale(scale, scale);
+                ctx.rotate(Math.sin(Date.now() / 2000) * 0.2); 
+                
+                // Draw image (assuming black background is handled by mix-blend-mode or just drawn)
+                // Since it's a favicon, we draw it normally.
+                ctx.drawImage(img, -16, -16, 32, 32);
+                ctx.restore();
+
+                favicon.href = canvas.toDataURL('image/png');
+                setTimeout(() => requestAnimationFrame(animate), 100); // 10fps is enough for favicon
+            }
+            animate();
+        };
+    }
+    initFaviconAnimation();
+
     let food = [];
     let particles = [];
     let score = 0;

@@ -130,6 +130,8 @@ body::before {
 .header {
     text-align: center;
     margin-bottom: 40px;
+    position: relative;
+    z-index: 10;
 }
 
 .header h1 {
@@ -1546,7 +1548,7 @@ input:checked+.slider:before {
         margin-bottom: 4px;
     }
 
-    .header p {
+    .header h1 {
         display: none;
         /* Hide description on mobile to save space */
     }
