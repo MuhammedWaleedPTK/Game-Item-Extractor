@@ -42,7 +42,6 @@
     const gotItBtn = document.getElementById('gotItBtn');
     const reportLink = document.getElementById('reportLink');
     const reportModal = document.getElementById('reportModal');
-    const closeReportModal = document.getElementById('closeReportModal');
     const progressBarFill = document.getElementById('progressBarFill');
     const snakeToggle = document.getElementById('snakeToggle');
 
