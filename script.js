@@ -43,6 +43,7 @@
     const reportLink = document.getElementById('reportLink');
     const reportModal = document.getElementById('reportModal');
     const closeReportModal = document.getElementById('closeReportModal');
+    const progressBarFill = document.getElementById('progressBarFill');
 
     // ─── Interactive Background (Neon Snake) ───
     const bgCtx = bgCanvas.getContext('2d');
@@ -462,12 +463,19 @@
             }
         });
 
-        // Auto-collapse on scroll
+        // Auto-collapse on scroll (with threshold to prevent layout shift glitches)
+        let expandScrollY = 0;
         window.addEventListener('scroll', () => {
-            if (isToggling) return; // Prevent layout shifts during expansion from instantly collapsing it
+            if (isToggling) {
+                expandScrollY = window.scrollY;
+                return;
+            }
 
             if (settingsBar.classList.contains('expanded')) {
-                settingsBar.classList.remove('expanded');
+                const delta = Math.abs(window.scrollY - expandScrollY);
+                if (delta > 20) { // Only collapse if they actually scrolled a bit
+                    settingsBar.classList.remove('expanded');
+                }
             }
         });
 
@@ -985,6 +993,12 @@
         progressMsg.className = isError ? 'progress-message error' : 'progress-message';
     }
 
+    function updateProgressBar(percent) {
+        if (progressBarFill) {
+            progressBarFill.style.width = `${percent}%`;
+        }
+    }
+
     function showToast(text) {
         toast.innerText = text;
         toast.classList.add('visible');
@@ -1113,6 +1127,7 @@
         if (targetCountStr === 'auto') return components;
 
         const targetCount = parseInt(targetCountStr, 10);
+        if (isNaN(targetCount)) return components;
 
         if (components.length === targetCount) return components;
 
@@ -1188,6 +1203,7 @@
 
         return components;
     }
+
 
     // ─── Build canvas from a 2D bounding box ───
     function extractItemToCanvas(sourceCanvas, sourceCtx, region, quality) {
@@ -1429,6 +1445,10 @@
                 thumbs[fileIdx].classList.remove('processing');
                 thumbs[fileIdx].classList.add('done');
 
+                // Update progress bar
+                const overallPercent = Math.round(((fileIdx + 1) / files.length) * 100);
+                updateProgressBar(overallPercent);
+
             } catch (error) {
                 console.error(`Error processing ${file.name}:`, error);
                 showMsg(`❌ Error processing ${file.name}. Continuing with remaining files...`, true);
@@ -1443,7 +1463,13 @@
             const sizeSetting = document.getElementById('exportSizeSelect').value;
             const sizeText = sizeSetting === 'exact' ? 'exact-fit' : `${sizeSetting}×${sizeSetting}`;
             showMsg(`✅ Done! Extracted <strong>${globalItemCount}</strong> item${globalItemCount > 1 ? 's' : ''} from <strong>${files.length}</strong> image${files.length > 1 ? 's' : ''} as ${sizeText} transparent PNGs.`);
-            if (globalItemCount > 1) downloadAllSection.classList.add('visible');
+            
+            if (globalItemCount > 1) {
+                downloadAllSection.classList.add('visible');
+                downloadAllBtn.classList.add('highlight-download');
+                // Remove highlight after some time or on interaction? 
+                // Let's keep it until they download.
+            }
 
             // Hide progress and preview sections to bring results to the top
             previewSection.classList.remove('visible');
@@ -1551,5 +1577,7 @@
         URL.revokeObjectURL(previewUrl);
         return itemCount;
     }
+
+
 
 })();

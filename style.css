@@ -728,6 +728,53 @@ input[type="file"] {
     box-shadow: 0 8px 30px rgba(108, 92, 231, 0.35);
 }
 
+.download-all-btn.highlight-download {
+    animation: pulseDownload 2s infinite;
+    background: linear-gradient(135deg, var(--accent), #ff00ff, var(--success));
+    background-size: 200% 200%;
+    animation: pulseDownload 2s infinite, gradientShift 3s ease infinite;
+}
+
+@keyframes pulseDownload {
+    0% { transform: scale(1); box-shadow: 0 4px 20px rgba(108, 92, 231, 0.25); }
+    50% { transform: scale(1.05); box-shadow: 0 10px 40px rgba(255, 0, 255, 0.4); }
+    100% { transform: scale(1); box-shadow: 0 4px 20px rgba(108, 92, 231, 0.25); }
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* ─── Progress Bar ─── */
+.progress-bar-container {
+    width: 100%;
+    max-width: 500px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin: 20px auto 10px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), #ff00ff, var(--success));
+    background-size: 200% 100%;
+    animation: progressGradient 2s linear infinite;
+    border-radius: 4px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes progressGradient {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+}
+
 /* ─── Reset Button ─── */
 .reset-section {
     display: none;
@@ -777,6 +824,7 @@ input[type="file"] {
     top: 20px;
     z-index: 1000;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 60px; /* Stabilize height */
 }
 
 .settings-bar.stuck {
@@ -786,6 +834,7 @@ input[type="file"] {
     border-radius: 30px;
     flex-wrap: nowrap;
     gap: 15px;
+    min-height: 48px;
 }
 
 .settings-bar.stuck.expanded {
