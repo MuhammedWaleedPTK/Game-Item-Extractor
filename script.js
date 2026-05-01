@@ -45,6 +45,15 @@
     const progressBarFill = document.getElementById('progressBarFill');
     const snakeToggle = document.getElementById('snakeToggle');
 
+    const outlineToggle = document.getElementById('outlineToggle');
+    const outlineColor = document.getElementById('outlineColor');
+    const outlineOpacity = document.getElementById('outlineOpacity');
+    const outlineThickness = document.getElementById('outlineThickness');
+    const outlineBlur = document.getElementById('outlineBlur');
+    const outlineSubControls = document.getElementById('outlineSubControls');
+    const outlineModeToggle = document.getElementById('outlineModeToggle');
+    const outlineColorRow = document.getElementById('outlineColorRow');
+
     // ─── Interactive Background State ───
     let isSnakeEnabled = localStorage.getItem('spritecut_snake_enabled') !== 'false';
     if (!isSnakeEnabled && snakeToggle) {
@@ -582,6 +591,32 @@
         removeBgToggle.checked = savedRemoveBg === 'true';
     }
 
+    // Apply persisted outline settings
+    const savedOutlineEnabled = localStorage.getItem('spritecut_outline_enabled') === 'true';
+    const savedOutlineColorVal = localStorage.getItem('spritecut_outline_color') || '#ffffff';
+    const savedOutlineOpacity = localStorage.getItem('spritecut_outline_opacity') || '100';
+    const savedOutlineThickness = localStorage.getItem('spritecut_outline_thickness') || '2';
+    const savedOutlineBlur = localStorage.getItem('spritecut_outline_blur') || '0';
+    const savedOutlineMode = localStorage.getItem('spritecut_outline_mode') || 'solid';
+
+    outlineToggle.checked = savedOutlineEnabled;
+    outlineColor.value = savedOutlineColorVal;
+    outlineOpacity.value = savedOutlineOpacity;
+    outlineThickness.value = savedOutlineThickness;
+    outlineBlur.value = savedOutlineBlur;
+
+    outlineModeToggle.querySelectorAll('button').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === savedOutlineMode);
+    });
+    outlineColorRow.style.display = savedOutlineMode === 'adaptive' ? 'none' : 'flex';
+
+    document.getElementById('outlineOpacityVal').value = savedOutlineOpacity;
+    document.getElementById('outlineThicknessVal').value = savedOutlineThickness;
+    document.getElementById('outlineBlurVal').value = savedOutlineBlur;
+
+    const allOutlineInputs = outlineSubControls.querySelectorAll('input');
+    allOutlineInputs.forEach(inp => inp.disabled = !savedOutlineEnabled);
+
     // Apply persisted padding
     const savedPadding = localStorage.getItem('spritecut_padding') || '10';
     if (paddingSlider) {
@@ -756,22 +791,156 @@
         return { color, opacity, angleDeg, distance, spread, size, offsetX, offsetY };
     }
 
-    function updateShadowVisuals() {
-        const isEnabled = shadowToggle.checked;
+    function getOutlineParams() {
+        const modeBtn = outlineModeToggle.querySelector('button.active');
+        const mode = modeBtn ? modeBtn.dataset.mode : 'solid';
+        const color = hexToRgb(outlineColor.value);
+        const opacity = parseInt(outlineOpacity.value, 10) / 100;
+        const thickness = parseInt(outlineThickness.value, 10);
+        const blur = parseInt(outlineBlur.value, 10);
+        return { mode, color, opacity, thickness, blur };
+    }
 
-        let filterString = 'none';
-        if (isEnabled) {
-            const p = getShadowParams();
-            // CSS drop-shadow doesn't support spread, so we just use offset + blur + color
-            const blurVal = Math.max(p.size, 0);
-            filterString = `drop-shadow(${p.offsetX}px ${p.offsetY}px ${blurVal}px rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity}))`;
+    function updateVisuals() {
+        const outline = getOutlineParams();
+        const shadow = getShadowParams();
+
+        // 1. Handle Canvas Redraw (for Adaptive Outline)
+        // We only need to redraw if Adaptive is active. 
+        // If it's Solid, we use CSS filters on the existing canvas for speed.
+        const cards = resultsDiv.querySelectorAll('.item-card');
+        cards.forEach(card => {
+            if (outline.mode === 'adaptive' && outlineToggle.checked) {
+                renderAdaptiveOutline(card, outline);
+            } else {
+                // If switching back to solid, we need to clear the adaptive outline from the canvas
+                // but only if it was previously drawn. Simplest is to just revert to clean extraction.
+                if (card._isAdaptiveDrawn) {
+                    revertToCleanCanvas(card);
+                }
+            }
+        });
+
+        // 2. Handle CSS Filters (Preview only)
+        let filterString = '';
+
+        // Outline (Solid mode only)
+        if (outlineToggle.checked && outline.mode === 'solid') {
+            const p = outline;
+            const c = `rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity})`;
+            
+            if (p.thickness > 0) {
+                const t = p.thickness;
+                const b = p.blur;
+                filterString += `drop-shadow(${t}px 0 ${b}px ${c}) ` +
+                               `drop-shadow(-${t}px 0 ${b}px ${c}) ` +
+                               `drop-shadow(0 ${t}px ${b}px ${c}) ` +
+                               `drop-shadow(0 -${t}px ${b}px ${c}) ` +
+                               `drop-shadow(${t * 0.7}px ${t * 0.7}px ${b}px ${c}) ` +
+                               `drop-shadow(-${t * 0.7}px ${t * 0.7}px ${b}px ${c}) ` +
+                               `drop-shadow(${t * 0.7}px -${t * 0.7}px ${b}px ${c}) ` +
+                               `drop-shadow(-${t * 0.7}px -${t * 0.7}px ${b}px ${c}) `;
+            } else if (p.blur > 0) {
+                filterString += `drop-shadow(0 0 ${p.blur}px ${c}) `;
+            }
         }
 
-        // Update all canvases on screen instantly
+        // Drop Shadow
+        if (shadowToggle.checked) {
+            const p = shadow;
+            const blurVal = Math.max(p.size, 0);
+            filterString += `drop-shadow(${p.offsetX}px ${p.offsetY}px ${blurVal}px rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity}))`;
+        }
+
+        if (!filterString) filterString = 'none';
+
         finalCanvases.forEach(canvas => {
             canvas.style.filter = filterString;
         });
     }
+
+    function renderAdaptiveOutline(card, p) {
+        const canvas = card._mainCanvas;
+        const ctx = canvas.getContext('2d');
+        
+        // 1. Start fresh with a clean extraction
+        const cleanCanvas = extractItemToCanvas(card._sourceCanvas, card._sourceCtx, card._region, currentQuality);
+        
+        // Resize main canvas to match clean one if needed
+        canvas.width = cleanCanvas.width;
+        canvas.height = cleanCanvas.height;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 2. Draw Adaptive Outline (Dilation)
+        if (p.thickness > 0 || p.blur > 0) {
+            ctx.save();
+            ctx.globalAlpha = p.opacity;
+            if (p.blur > 0) {
+                ctx.filter = `blur(${p.blur}px)`;
+            }
+            
+            const steps = 16;
+            const radius = p.thickness;
+            for (let i = 0; i < steps; i++) {
+                const angle = (i / steps) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                ctx.drawImage(cleanCanvas, x, y);
+            }
+            ctx.restore();
+        }
+        
+        // 3. Draw original item on top
+        ctx.drawImage(cleanCanvas, 0, 0);
+        card._isAdaptiveDrawn = true;
+    }
+
+    function revertToCleanCanvas(card) {
+        const cleanCanvas = extractItemToCanvas(card._sourceCanvas, card._sourceCtx, card._region, currentQuality);
+        const ctx = card._mainCanvas.getContext('2d');
+        card._mainCanvas.width = cleanCanvas.width;
+        card._mainCanvas.height = cleanCanvas.height;
+        ctx.clearRect(0, 0, cleanCanvas.width, cleanCanvas.height);
+        ctx.drawImage(cleanCanvas, 0, 0);
+        card._isAdaptiveDrawn = false;
+    }
+
+    outlineModeToggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        outlineModeToggle.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const mode = btn.dataset.mode;
+        outlineColorRow.style.display = mode === 'adaptive' ? 'none' : 'flex';
+        localStorage.setItem('spritecut_outline_mode', mode);
+        updateVisuals();
+        if (window.clarity) clarity("event", "outline_mode_change", { mode });
+    });
+
+    function setOutlineControlsEnabled(enabled) {
+        const allOutlineInputs = outlineSubControls.querySelectorAll('input');
+        allOutlineInputs.forEach(inp => inp.disabled = !enabled);
+    }
+
+    outlineToggle.addEventListener('change', () => {
+        const isEnabled = outlineToggle.checked;
+        setOutlineControlsEnabled(isEnabled);
+        localStorage.setItem('spritecut_outline_enabled', isEnabled);
+        updateVisuals();
+        if (window.clarity) clarity("event", "outline_toggle", { enabled: isEnabled });
+    });
+
+    outlineColor.addEventListener('input', () => {
+        localStorage.setItem('spritecut_outline_color', outlineColor.value);
+        updateVisuals();
+        if (window.clarity) clarity("event", "outline_settings_change");
+    });
+
+    syncSliderAndInput(outlineOpacity, document.getElementById('outlineOpacityVal'), 'spritecut_outline_opacity', updateVisuals);
+    syncSliderAndInput(outlineThickness, document.getElementById('outlineThicknessVal'), 'spritecut_outline_thickness', updateVisuals);
+    syncSliderAndInput(outlineBlur, document.getElementById('outlineBlurVal'), 'spritecut_outline_blur', updateVisuals);
 
     function setShadowControlsEnabled(enabled) {
         const allShadowInputs = shadowSubControls.querySelectorAll('input');
@@ -782,20 +951,20 @@
         const isEnabled = shadowToggle.checked;
         setShadowControlsEnabled(isEnabled);
         localStorage.setItem('spritecut_shadow_enabled', isEnabled);
-        updateShadowVisuals();
+        updateVisuals();
     });
 
     // Individual control listeners with bidirectional sync
     shadowColor.addEventListener('input', () => {
         localStorage.setItem('spritecut_shadow_color', shadowColor.value);
-        updateShadowVisuals();
+        updateVisuals();
     });
 
-    function syncSliderAndInput(slider, input, storageKey) {
+    function syncSliderAndInput(slider, input, storageKey, callback) {
         slider.addEventListener('input', () => {
             input.value = slider.value;
             localStorage.setItem(storageKey, slider.value);
-            updateShadowVisuals();
+            if (callback) callback();
         });
         input.addEventListener('input', () => {
             let val = parseInt(input.value, 10);
@@ -804,15 +973,15 @@
             slider.value = val;
             input.value = val;
             localStorage.setItem(storageKey, val);
-            updateShadowVisuals();
+            if (callback) callback();
         });
     }
 
-    syncSliderAndInput(shadowOpacity, document.getElementById('shadowOpacityVal'), 'spritecut_shadow_opacity');
-    syncSliderAndInput(shadowAngle, document.getElementById('shadowAngleVal'), 'spritecut_shadow_angle');
-    syncSliderAndInput(shadowDistance, document.getElementById('shadowDistanceVal'), 'spritecut_shadow_distance');
-    syncSliderAndInput(shadowSpread, document.getElementById('shadowSpreadVal'), 'spritecut_shadow_spread');
-    syncSliderAndInput(shadowSize, document.getElementById('shadowSizeVal'), 'spritecut_shadow_size');
+    syncSliderAndInput(shadowOpacity, document.getElementById('shadowOpacityVal'), 'spritecut_shadow_opacity', updateVisuals);
+    syncSliderAndInput(shadowAngle, document.getElementById('shadowAngleVal'), 'spritecut_shadow_angle', updateVisuals);
+    syncSliderAndInput(shadowDistance, document.getElementById('shadowDistanceVal'), 'spritecut_shadow_distance', updateVisuals);
+    syncSliderAndInput(shadowSpread, document.getElementById('shadowSpreadVal'), 'spritecut_shadow_spread', updateVisuals);
+    syncSliderAndInput(shadowSize, document.getElementById('shadowSizeVal'), 'spritecut_shadow_size', updateVisuals);
 
     // ─── Settings Auto-Update ───
     removeBgToggle.addEventListener('change', () => {
@@ -983,36 +1152,95 @@
         if (window.clarity) clarity("event", "reset_workspace");
     });
 
-    // ─── Bake Shadow function for Downloads ───
-    function bakeShadowToCanvas(sourceCanvas) {
-        const isEnabled = shadowToggle.checked;
-        if (!isEnabled) return sourceCanvas; // Return original if no shadow
+    // ─── Bake Shadow & Outline function for Downloads ───
+    function bakeEffectsToCanvas(sourceCanvas, card = null) {
+        const hasShadow = shadowToggle.checked;
+        const hasOutline = outlineToggle.checked;
+        const outline = getOutlineParams();
+        
+        // If we are adaptive, the outline is ALREADY in the sourceCanvas (because of preview redraw)
+        // UNLESS we are in solid mode.
+        // Wait, to be safe, let's always work from a "Clean" version for baking if possible.
+        let workingCanvas = sourceCanvas;
+        if (card && card._sourceCanvas) {
+             workingCanvas = extractItemToCanvas(card._sourceCanvas, card._sourceCtx, card._region, currentQuality);
+        }
 
-        const p = getShadowParams();
+        if (!hasShadow && !hasOutline) return workingCanvas;
 
         const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = sourceCanvas.width;
-        tempCanvas.height = sourceCanvas.height;
+        tempCanvas.width = workingCanvas.width;
+        tempCanvas.height = workingCanvas.height;
         const ctx = tempCanvas.getContext('2d');
 
-        // Setup shadow using all parameters
-        ctx.shadowColor = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity})`;
-        ctx.shadowBlur = p.size;
-        ctx.shadowOffsetX = p.offsetX;
-        ctx.shadowOffsetY = p.offsetY;
+        // 1. Draw Outline
+        if (hasOutline) {
+            const p = outline;
+            if (p.thickness > 0 || p.blur > 0) {
+                ctx.save();
+                ctx.globalAlpha = p.opacity;
+                if (p.blur > 0) {
+                    ctx.filter = `blur(${p.blur}px)`;
+                }
+                
+                const steps = 32; // More steps for final bake
+                const radius = p.thickness;
+                
+                if (p.mode === 'solid') {
+                    const c = `rgb(${p.color.r}, ${p.color.g}, ${p.color.b})`;
+                    const maskCanvas = document.createElement('canvas');
+                    maskCanvas.width = workingCanvas.width;
+                    maskCanvas.height = workingCanvas.height;
+                    const mCtx = maskCanvas.getContext('2d');
+                    mCtx.drawImage(workingCanvas, 0, 0);
+                    mCtx.globalCompositeOperation = 'source-in';
+                    mCtx.fillStyle = c;
+                    mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 
-        // Simulate spread by drawing shadow multiple times with decreasing blur
-        if (p.spread > 0) {
-            const passes = Math.ceil(p.spread / 20); // 1-5 extra passes
-            for (let i = 0; i < passes; i++) {
-                ctx.shadowBlur = Math.max(p.size - (i * 2), 1);
-                ctx.drawImage(sourceCanvas, 0, 0);
+                    for (let i = 0; i < steps; i++) {
+                        const angle = (i / steps) * Math.PI * 2;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        ctx.drawImage(maskCanvas, x, y);
+                    }
+                } else {
+                    // Adaptive Mode: Just draw the image itself in a circle
+                    for (let i = 0; i < steps; i++) {
+                        const angle = (i / steps) * Math.PI * 2;
+                        const x = Math.cos(angle) * radius;
+                        const y = Math.sin(angle) * radius;
+                        ctx.drawImage(workingCanvas, x, y);
+                    }
+                }
+                ctx.restore();
             }
         }
 
-        // Final draw with full settings
-        ctx.shadowBlur = p.size;
-        ctx.drawImage(sourceCanvas, 0, 0);
+        // 2. Draw Drop Shadow
+        if (hasShadow) {
+            const p = getShadowParams();
+            ctx.save();
+            ctx.shadowColor = `rgba(${p.color.r}, ${p.color.g}, ${p.color.b}, ${p.opacity})`;
+            ctx.shadowBlur = p.size;
+            ctx.shadowOffsetX = p.offsetX;
+            ctx.shadowOffsetY = p.offsetY;
+
+            if (p.spread > 0) {
+                const passes = Math.ceil(p.spread / 20);
+                for (let i = 0; i < passes; i++) {
+                    ctx.shadowBlur = Math.max(p.size - (i * 2), 1);
+                    ctx.drawImage(workingCanvas, 0, 0);
+                }
+            }
+
+            ctx.shadowBlur = p.size;
+            ctx.drawImage(workingCanvas, 0, 0);
+            ctx.restore();
+        }
+
+        // 3. Draw original image on top
+        ctx.drawImage(workingCanvas, 0, 0);
+        
         return tempCanvas;
     }
 
@@ -1029,7 +1257,7 @@
                 if (!card._mainCanvas) continue;
                 const titleInput = card.querySelector('.item-title-input');
                 const filename = titleInput ? titleInput.value : `${currentPrefix}${i + 1}`;
-                const bakedCanvas = bakeShadowToCanvas(card._mainCanvas);
+                const bakedCanvas = bakeEffectsToCanvas(card._mainCanvas, card);
                 const dataUrl = bakedCanvas.toDataURL('image/png');
                 const base64 = dataUrl.split(',')[1];
                 zip.file(`${filename}.png`, base64, { base64: true });
@@ -1081,9 +1309,9 @@
         setTimeout(() => toast.classList.remove('visible'), 2000);
     }
 
-    async function copyToClipboard(canvas) {
+    async function copyToClipboard(canvas, card = null) {
         try {
-            const bakedCanvas = bakeShadowToCanvas(canvas);
+            const bakedCanvas = bakeEffectsToCanvas(canvas, card);
             const blob = await new Promise(resolve => bakedCanvas.toBlob(resolve));
             const item = new ClipboardItem({ [blob.type]: blob });
             await navigator.clipboard.write([item]);
@@ -1382,7 +1610,7 @@
         canvasContainer.appendChild(mainCanvas);
 
         canvasContainer.addEventListener('click', () => {
-            copyToClipboard(mainCanvas);
+            copyToClipboard(mainCanvas, card);
         });
 
         card.appendChild(canvasContainer);
@@ -1390,21 +1618,12 @@
         // Animation delay for staggering
         card.style.animationDelay = `${(globalIndex % 6) * 0.1}s`;
 
-        // Apply initial visual shadow state
-        if (shadowToggle.checked) {
-            const p = getShadowParams();
-            const blurVal = Math.max(p.size, 0);
-            mainCanvas.style.filter = `drop-shadow(${p.offsetX}px ${p.offsetY}px ${blurVal}px rgba(${p.color.r},${p.color.g},${p.color.b},${p.opacity}))`;
-        } else {
-            mainCanvas.style.filter = 'none';
-        }
-
         // Download button
         const downloadBtn = document.createElement('button');
         downloadBtn.className = 'download-btn';
         downloadBtn.innerHTML = '📥 Download PNG';
         downloadBtn.onclick = () => {
-            const bakedCanvas = bakeShadowToCanvas(mainCanvas);
+            const bakedCanvas = bakeEffectsToCanvas(mainCanvas, card);
             const link = document.createElement('a');
             link.download = `${titleInput.value}.png`;
             link.href = bakedCanvas.toDataURL('image/png');
@@ -1422,6 +1641,9 @@
 
         imageGroup.appendChild(card);
         finalCanvases.push(mainCanvas);
+
+        // Apply initial visual state
+        updateVisuals();
 
         // Apply background from current active toggle to the CONTAINER, not the canvas
         const activeSwatch = bgToggles.querySelector('.bg-swatch.active');

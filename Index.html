@@ -174,6 +174,46 @@
                 </div>
             </div>
         </div>
+
+        <div class="setting-group shadow-group essential">
+            <div class="shadow-header">
+                <label for="outlineToggle">Outline</label>
+                <label class="switch">
+                    <input type="checkbox" id="outlineToggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <div class="shadow-sub-controls" id="outlineSubControls">
+                <div class="shadow-control-row">
+                    <label>Mode</label>
+                    <div class="item-count-toggle outline-mode-toggle" id="outlineModeToggle" role="group">
+                        <button data-mode="solid" class="active" title="Single Solid Color">Solid</button>
+                        <button data-mode="adaptive" title="Matches Item Edges">Adaptive</button>
+                    </div>
+                </div>
+                <div class="shadow-control-row" id="outlineColorRow">
+                    <label>Color</label>
+                    <input type="color" id="outlineColor" value="#ffffff" class="shadow-color-input" disabled>
+                </div>
+
+                <div class="shadow-control-row">
+                    <label>Opacity</label>
+                    <input type="range" id="outlineOpacity" min="0" max="100" value="100" class="styled-slider shadow-slider" disabled>
+                    <input type="number" class="shadow-val-input" id="outlineOpacityVal" value="100" min="0" max="100" disabled> <span class="shadow-unit">%</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Thickness</label>
+                    <input type="range" id="outlineThickness" min="0" max="20" value="2" class="styled-slider shadow-slider" disabled>
+                    <input type="number" class="shadow-val-input" id="outlineThicknessVal" value="2" min="0" max="20" disabled> <span class="shadow-unit">px</span>
+                </div>
+                <div class="shadow-control-row">
+                    <label>Fade (Blur)</label>
+                    <input type="range" id="outlineBlur" min="0" max="20" value="0" class="styled-slider shadow-slider" disabled>
+                    <input type="number" class="shadow-val-input" id="outlineBlurVal" value="0" min="0" max="20" disabled> <span class="shadow-unit">px</span>
+                </div>
+            </div>
+        </div>
+
         <div class="setting-group shadow-group essential">
             <div class="shadow-header">
                 <label for="paddingSlider">Padding</label>
@@ -330,6 +370,10 @@
                 <div class="setting-item">
                     <strong>Drop Shadow:</strong> 
                     <span>Add depth with customizable color, opacity, distance, and spread.</span>
+                </div>
+                <div class="setting-item">
+                    <strong>Outline:</strong> 
+                    <span>Add a colored border around items with adjustable thickness and fade.</span>
                 </div>
                 <div class="setting-item">
                     <strong>Padding:</strong> 
