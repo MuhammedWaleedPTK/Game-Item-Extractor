@@ -73,42 +73,6 @@
         thickness: 8
     };
 
-    // ─── Favicon Animation ───
-    function initFaviconAnimation() {
-        const favicon = document.querySelector('link[rel="icon"]');
-        if (!favicon) return;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = 32;
-        canvas.height = 32;
-        const ctx = canvas.getContext('2d');
-        const img = new Image();
-        img.src = 'logo.png';
-
-        img.onload = () => {
-            let angle = 0;
-            function animate() {
-                ctx.clearRect(0, 0, 32, 32);
-                ctx.save();
-                ctx.translate(16, 16);
-                
-                // Subtle pulse + very slow rotation
-                const scale = 0.9 + Math.sin(Date.now() / 1000) * 0.1;
-                ctx.scale(scale, scale);
-                ctx.rotate(Math.sin(Date.now() / 2000) * 0.2); 
-                
-                // Draw image (assuming black background is handled by mix-blend-mode or just drawn)
-                // Since it's a favicon, we draw it normally.
-                ctx.drawImage(img, -16, -16, 32, 32);
-                ctx.restore();
-
-                favicon.href = canvas.toDataURL('image/png');
-                setTimeout(() => requestAnimationFrame(animate), 100); // 10fps is enough for favicon
-            }
-            animate();
-        };
-    }
-    initFaviconAnimation();
 
     let food = [];
     let particles = [];
@@ -637,17 +601,22 @@
                         newCanvas.style.filter = card._mainCanvas.style.filter;
 
                         // Replace in DOM
-                        card._mainCanvas.parentNode.replaceChild(newCanvas, card._mainCanvas);
+                        const parent = card._mainCanvas.parentNode;
+                        parent.replaceChild(newCanvas, card._mainCanvas);
 
                         // Update references
                         const idx = finalCanvases.indexOf(card._mainCanvas);
                         if (idx > -1) finalCanvases[idx] = newCanvas;
                         card._mainCanvas = newCanvas;
 
+                        // Re-render adaptive outline if active
+                        const outlineMode = localStorage.getItem('spritecut_outline_mode');
+                        if (outlineToggle.checked && outlineMode === 'adaptive') {
+                            renderAdaptiveOutline(card, getOutlineParams());
+                        }
+
                         // Re-bind click to copy
-                        newCanvas.parentNode.addEventListener('click', () => {
-                            copyToClipboard(newCanvas);
-                        });
+                        parent.onclick = () => copyToClipboard(newCanvas, card);
                     }
                 }
             });
@@ -1518,9 +1487,14 @@
         const targetSize = isExact ? 0 : parseInt(sizeSetting, 10);
 
         const finalCanvas = document.createElement('canvas');
+        const paddingSlider = document.getElementById('paddingSlider');
+        const paddingPct = paddingSlider ? parseInt(paddingSlider.value, 10) : 10;
+
         if (isExact) {
-            finalCanvas.width = region.width;
-            finalCanvas.height = region.height;
+            const padX = Math.round(region.width * (paddingPct / 100));
+            const padY = Math.round(region.height * (paddingPct / 100));
+            finalCanvas.width = region.width + padX * 2;
+            finalCanvas.height = region.height + padY * 2;
         } else {
             finalCanvas.width = targetSize;
             finalCanvas.height = targetSize;
@@ -1545,21 +1519,18 @@
         );
 
         if (isExact) {
-            // Draw without scaling or padding
-            finalCtx.drawImage(itemCanvas, 0, 0);
+            // Draw centered with padding
+            const padX = Math.round(region.width * (paddingPct / 100));
+            const padY = Math.round(region.height * (paddingPct / 100));
+            finalCtx.drawImage(itemCanvas, padX, padY);
         } else {
             // Scale and center into the target resolution based on padding slider
-            const paddingSlider = document.getElementById('paddingSlider');
-            const paddingPct = paddingSlider ? parseInt(paddingSlider.value, 10) : 10;
             const scaleFactor = 1 - ((paddingPct * 2) / 100);
             const maxFit = targetSize * (scaleFactor > 0 ? scaleFactor : 0.1);
             const scale = Math.min(maxFit / region.width, maxFit / region.height);
             // If the item is very small, we might not want to blur it up too much.
             // But it's usually preferred to unify sizing. Check quality setting to determine if we allow upscale blurring.
-            let effectiveScale = quality === 'off' ? Math.ceil(scale) : scale;
-            if (quality === 'off' && effectiveScale > scale) effectiveScale = Math.floor(scale);
-            if (effectiveScale < 1 && quality === 'off') effectiveScale = 1; // Basic pixel perfect rounding fallback
-            if (quality !== 'off') effectiveScale = scale;
+            const effectiveScale = scale;
 
             const newW = region.width * effectiveScale;
             const newH = region.height * effectiveScale;
